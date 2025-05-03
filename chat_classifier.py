@@ -2,7 +2,7 @@ import openai
 import os
 import json
 
-openai.api_key = os.environ.get("OPENAI_API_KEY")
+client = openai.OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 
 def chat_classify(labels: list) -> dict:
     prompt = f"""
@@ -20,7 +20,7 @@ Only return valid JSON. No explanations. Keep keys lowercase.
 """
 
     try:
-        response = openai.ChatCompletion.create(
+        response = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[
                 {"role": "system", "content": "You are a helpful and concise image tag classifier for advertising."},
@@ -28,10 +28,10 @@ Only return valid JSON. No explanations. Keep keys lowercase.
             ],
             temperature=0.4,
         )
-        content = response['choices'][0]['message']['content']
+        content = response.choices[0].message.content
         return json.loads(content)
     except Exception as e:
-        print(f"ChatGPT classification error: {e}")
+        print("ChatGPT classification error:", e)
         return {
             "audience": "unknown",
             "product": "unknown",
