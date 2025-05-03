@@ -6,6 +6,15 @@ from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseDownload
 from google.cloud import vision
 
+from chat_classifier import chat_classify
+
+# Inside run_tagger:
+chat_result = chat_classify(labels)
+audience = chat_result.get("audience", "unknown")
+product = chat_result.get("product", "unknown")
+angle = chat_result.get("angle", "unknown")
+descriptors = ', '.join(chat_result.get("descriptors", []))
+
 SCOPES = [
     'https://www.googleapis.com/auth/drive.readonly',
     'https://www.googleapis.com/auth/spreadsheets',
