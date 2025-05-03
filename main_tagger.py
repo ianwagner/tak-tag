@@ -1,19 +1,13 @@
+
 import io
 import json
+import toml
 import streamlit as st
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseDownload
 from google.cloud import vision
-
 from chat_classifier import chat_classify
-
-# Inside run_tagger:
-chat_result = chat_classify(labels)
-audience = chat_result.get("audience", "unknown")
-product = chat_result.get("product", "unknown")
-angle = chat_result.get("angle", "unknown")
-descriptors = ', '.join(chat_result.get("descriptors", []))
 
 SCOPES = [
     'https://www.googleapis.com/auth/drive.readonly',
@@ -21,8 +15,7 @@ SCOPES = [
     'https://www.googleapis.com/auth/cloud-platform'
 ]
 
-import toml
-
+# Load secrets from secrets.toml
 with open("secrets.toml", "r") as f:
     secrets = toml.load(f)
 
@@ -53,13 +46,6 @@ def analyze_image(file_id):
         raise Exception(f"Vision API error: {response.error.message}")
     return [entity.description for entity in response.web_detection.web_entities]
 
-def match_tag(labels, tag_map):
-    for label in labels:
-        for category, synonyms in tag_map.items():
-            if label.lower() in [s.lower() for s in synonyms]:
-                return category
-    return "unknown"
-
 def write_to_sheet(sheet_id, rows):
     sheets_service.spreadsheets().values().append(
         spreadsheetId=sheet_id,
@@ -70,19 +56,25 @@ def write_to_sheet(sheet_id, rows):
     ).execute()
 
 def run_tagger(sheet_id, folder_id, audience_map, product_map, angle_map):
-    rows = [['Image Name', 'Image Link', 'Tags', 'Audience', 'Product', 'Angle']]
+    rows = [['Image Name', 'Image Link', 'Raw Labels', 'Audience', 'Product', 'Angle', 'Descriptors']]
     files = list_images(folder_id)
     for file in files:
         labels = analyze_image(file['id'])
-        audience = match_tag(labels, audience_map)
-        product = match_tag(labels, product_map)
-        angle = match_tag(labels, angle_map)
+
+        # fallback to chat classifier if rules don't match
+        chat_result = chat_classify(labels)
+        audience = chat_result.get("audience", "unknown")
+        product = chat_result.get("product", "unknown")
+        angle = chat_result.get("angle", "unknown")
+        descriptors = ', '.join(chat_result.get("descriptors", []))
+
         rows.append([
             file['name'],
             file['webViewLink'],
             ', '.join(labels),
             audience,
             product,
-            angle
+            angle,
+            descriptors
         ])
     write_to_sheet(sheet_id, rows)
