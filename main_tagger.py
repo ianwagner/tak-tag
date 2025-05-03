@@ -12,8 +12,14 @@ SCOPES = [
     'https://www.googleapis.com/auth/cloud-platform'
 ]
 
-# Load credentials from Streamlit secrets
-SERVICE_ACCOUNT_INFO = json.loads(st.secrets["google"]["service_account"])
+import toml
+
+with open("secrets.toml", "r") as f:
+    secrets = toml.load(f)
+
+SERVICE_ACCOUNT_INFO = json.loads(secrets["google"]["service_account"])
+app_password = secrets["app_password"]
+
 credentials = service_account.Credentials.from_service_account_info(SERVICE_ACCOUNT_INFO, scopes=SCOPES)
 
 drive_service = build('drive', 'v3', credentials=credentials)
