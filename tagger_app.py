@@ -1,17 +1,18 @@
+
+import streamlit as st
+from main_tagger import run_tagger
 import toml
 
+st.set_page_config(page_title="Tak Tag", layout="centered")
+st.title("🧠 Tak Tag")
+
+# Load secrets for app password
 with open("secrets.toml", "r") as f:
     secrets = toml.load(f)
 
 app_password = secrets["app_password"]
 
-import streamlit as st
-from main_tagger import run_tagger
-
-st.set_page_config(page_title="Studio Tak Tag", layout="centered")
-st.title("🧠 Tak Tag")
-
-# Password protection
+# Password gate
 password = st.text_input("🔒 Enter password", type="password")
 if password != app_password:
     st.stop()
@@ -20,37 +21,22 @@ if password != app_password:
 sheet_id = st.text_input("Google Sheet ID")
 folder_id = st.text_input("Google Drive Folder ID")
 
-st.subheader("🎯 Audience Tags")
-audience_tags = {}
-num_audience = st.number_input("How many audience tags?", min_value=1, max_value=10, value=2)
-for i in range(num_audience):
-    key = st.text_input(f"Audience Tag #{i+1}", key=f"aud_key_{i}")
-    synonyms = st.text_input(f"Synonyms (comma-separated)", key=f"aud_syn_{i}")
-    if key:
-        audience_tags[key] = [s.strip() for s in synonyms.split(',') if s.strip()]
+st.subheader("🎯 Your Expected Tags (Optional Matching)")
 
-st.subheader("📦 Product Tags")
-product_tags = {}
-num_products = st.number_input("How many product tags?", min_value=1, max_value=10, value=2)
-for i in range(num_products):
-    key = st.text_input(f"Product Tag #{i+1}", key=f"prod_key_{i}")
-    synonyms = st.text_input(f"Synonyms (comma-separated)", key=f"prod_syn_{i}")
-    if key:
-        product_tags[key] = [s.strip() for s in synonyms.split(',') if s.strip()]
+audiences = st.text_input("Expected Audiences (comma-separated)", value="mom, teen, athlete, grandma")
+products = st.text_input("Expected Products (comma-separated)", value="deodorant, concealer, sneaker, moisturizer")
+angles = st.text_input("Expected Angles (comma-separated)", value="confidence, natural beauty, performance, wellness")
 
-st.subheader("🧠 Angle Tags")
-angle_tags = {}
-num_angles = st.number_input("How many angle tags?", min_value=1, max_value=10, value=2)
-for i in range(num_angles):
-    key = st.text_input(f"Angle Tag #{i+1}", key=f"angle_key_{i}")
-    synonyms = st.text_input(f"Synonyms (comma-separated)", key=f"angle_syn_{i}")
-    if key:
-        angle_tags[key] = [s.strip() for s in synonyms.split(',') if s.strip()]
+# Clean and convert to lists
+expected_audiences = [a.strip().lower() for a in audiences.split(",") if a.strip()]
+expected_products = [p.strip().lower() for p in products.split(",") if p.strip()]
+expected_angles = [a.strip().lower() for a in angles.split(",") if a.strip()]
 
 if st.button("Run Tagger"):
     try:
         st.info("Running tagger...")
-        run_tagger(sheet_id, folder_id, audience_tags, product_tags, angle_tags)
+        run_tagger(sheet_id, folder_id, expected_audiences, expected_products, expected_angles)
         st.success("✅ Done! Tags written to Google Sheet.")
     except Exception as e:
         st.error(f"❌ Error: {e}")
+
