@@ -1,12 +1,19 @@
+import toml
+
+with open("secrets.toml", "r") as f:
+    secrets = toml.load(f)
+
+app_password = secrets["app_password"]
+
 import streamlit as st
 from main_tagger import run_tagger
 
-st.set_page_config(page_title="StudioTAK Tagger", layout="centered")
-st.title("🧠 StudioTAK Tagger")
+st.set_page_config(page_title="Studio Tak Tag", layout="centered")
+st.title("🧠 Tak Tag")
 
 # Password protection
 password = st.text_input("🔒 Enter password", type="password")
-if password != st.secrets["app_password"]:
+if password != app_password:
     st.stop()
 
 # Inputs
