@@ -46,6 +46,10 @@ def analyze_image(file_id):
         raise Exception(f"Vision API error: {response.error.message}")
     return [entity.description for entity in response.web_detection.web_entities]
 
+def soft_match(expected_list, gpt_value):
+    gpt_value = gpt_value.lower()
+    return next((x for x in expected_list if x in gpt_value), "unknown")
+
 def write_to_sheet(sheet_id, rows):
     sheets_service.spreadsheets().values().append(
         spreadsheetId=sheet_id,
@@ -55,26 +59,35 @@ def write_to_sheet(sheet_id, rows):
         body={'values': rows}
     ).execute()
 
-def run_tagger(sheet_id, folder_id, audience_map, product_map, angle_map):
-    rows = [['Image Name', 'Image Link', 'Raw Labels', 'Audience', 'Product', 'Angle', 'Descriptors']]
+def run_tagger(sheet_id, folder_id, expected_audiences, expected_products, expected_angles):
+    rows = [['Image Name', 'Image Link', 'Raw Labels', 'GPT Audience', 'GPT Product', 'GPT Angle', 'Descriptors', 'Matched Audience', 'Matched Product', 'Matched Angle']]
     files = list_images(folder_id)
     for file in files:
         labels = analyze_image(file['id'])
 
-        # fallback to chat classifier if rules don't match
+        # Run GPT classification
         chat_result = chat_classify(labels)
-        audience = chat_result.get("audience", "unknown")
-        product = chat_result.get("product", "unknown")
-        angle = chat_result.get("angle", "unknown")
+        gpt_audience = chat_result.get("audience", "unknown")
+        gpt_product = chat_result.get("product", "unknown")
+        gpt_angle = chat_result.get("angle", "unknown")
         descriptors = ', '.join(chat_result.get("descriptors", []))
+
+        # Compare to expected categories
+        matched_audience = soft_match(expected_audiences, gpt_audience)
+        matched_product = soft_match(expected_products, gpt_product)
+        matched_angle = soft_match(expected_angles, gpt_angle)
 
         rows.append([
             file['name'],
             file['webViewLink'],
             ', '.join(labels),
-            audience,
-            product,
-            angle,
-            descriptors
+            gpt_audience,
+            gpt_product,
+            gpt_angle,
+            descriptors,
+            matched_audience,
+            matched_product,
+            matched_angle
         ])
     write_to_sheet(sheet_id, rows)
+
