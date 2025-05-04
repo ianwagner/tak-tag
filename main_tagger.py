@@ -37,18 +37,23 @@ def analyze_image(file_id):
     request = drive_service.files().get_media(fileId=file_id)
     fh = io.BytesIO()
     downloader = MediaIoBaseDownload(fh, request)
-    done = False
-    while not done:
-        status, done = downloader.next_chunk()
-    image = vision.Image(content=fh.getvalue())
-    response = vision_client.web_detection(image=image)
-    if response.error.message:
-        raise Exception(f"Vision API error: {response.error.message}")
-    return [entity.description for entity in response.web_detection.web_entities]
+    while not downloader.next_chunk()[1]:
+        pass
 
-def soft_match(expected_list, gpt_value):
-    gpt_value = gpt_value.lower()
-    return next((x for x in expected_list if x in gpt_value), "unknown")
+    image = vision.Image(content=fh.getvalue())
+
+    response = vision_client.annotate_image({
+        'image': image,
+        'features': [
+            {'type': vision.Feature.Type.LABEL_DETECTION},
+            {'type': vision.Feature.Type.WEB_DETECTION}
+        ]
+    })
+
+    labels = [label.description for label in response.label_annotations]
+    web_labels = [entity.description for entity in response.web_detection.web_entities]
+
+    return labels, web_labels
 
 def write_to_sheet(sheet_id, rows):
     sheets_service.spreadsheets().values().append(
@@ -60,27 +65,32 @@ def write_to_sheet(sheet_id, rows):
     ).execute()
 
 def run_tagger(sheet_id, folder_id, expected_audiences, expected_products, expected_angles):
-    rows = [['Image Name', 'Image Link', 'Raw Labels', 'GPT Audience', 'GPT Product', 'GPT Angle', 'Descriptors', 'Matched Audience', 'Matched Product', 'Matched Angle']]
+    rows = [['Image Name', 'Image Link', 'Google Labels', 'Google Web Entities', 'GPT Audience', 'GPT Product', 'GPT Angle', 'Descriptors', 'Matched Audience', 'Matched Product', 'Matched Angle']]
     files = list_images(folder_id)
     for file in files:
-        labels = analyze_image(file['id'])
+        labels, web_labels = analyze_image(file['id'])
 
-        # Run GPT classification
-        chat_result = chat_classify(labels)
+        chat_result = chat_classify(
+            labels,
+            web_labels,
+            expected_audiences,
+            expected_products,
+            expected_angles
+        )
+
         gpt_audience = chat_result.get("audience", "unknown")
         gpt_product = chat_result.get("product", "unknown")
         gpt_angle = chat_result.get("angle", "unknown")
         descriptors = ', '.join(chat_result.get("descriptors", []))
-
-        # Compare to expected categories
-        matched_audience = soft_match(expected_audiences, gpt_audience)
-        matched_product = soft_match(expected_products, gpt_product)
-        matched_angle = soft_match(expected_angles, gpt_angle)
+        matched_audience = chat_result.get("match_audience", "unknown")
+        matched_product = chat_result.get("match_product", "unknown")
+        matched_angle = chat_result.get("match_angle", "unknown")
 
         rows.append([
             file['name'],
             file['webViewLink'],
             ', '.join(labels),
+            ', '.join(web_labels),
             gpt_audience,
             gpt_product,
             gpt_angle,
@@ -90,4 +100,3 @@ def run_tagger(sheet_id, folder_id, expected_audiences, expected_products, expec
             matched_angle
         ])
     write_to_sheet(sheet_id, rows)
-
