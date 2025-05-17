@@ -73,7 +73,7 @@ with tab1:
 
 with tab2:
     st.title("📋 Generate Creative Recipes")
-    col_main, _ = st.container()
+    col_main, = st.columns([1]) 
     with col_main:
         recipe_sheet_id = st.text_input("Tagged Asset Sheet ID", key="recipe_sheet")
         image_folder_id = st.text_input("Google Drive Folder ID (for image links)", key="asset_folder")
