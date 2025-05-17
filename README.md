@@ -59,3 +59,21 @@ PY
 ```
 
 This writes tag results to the provided Google Sheet. Recipes can be generated in a similar manner using `generate_recipes` from `recipe_generator.py`.
+
+## Customizing the Streamlit Theme
+
+The app looks for a `.streamlit/config.toml` file to control colors and fonts. Edit this file to change the theme applied across all pages.
+
+Example configuration:
+
+```toml
+[theme]
+base = "light"
+primaryColor = "#00aaad"
+backgroundColor = "#f5f5f5"
+secondaryBackgroundColor = "#ffffff"
+textColor = "#000000"
+font = "sans serif"
+```
+
+Updates to this file take effect the next time you run `streamlit run tagger_app.py`.
