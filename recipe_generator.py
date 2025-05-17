@@ -55,7 +55,7 @@ def get_brand_profile(brand_df, brand_code):
 def generate_recipe_copy(asset, layout, copy_format, brand):
     style = copy_format.get("Prompt Style", "").strip()
     if not style:
-        style = "⚠️ Prompt Style missing — please check the copy_formats sheet."
+        style = "⚠️"
     product = asset.get("Matched Product")
     audience = asset.get("Matched Audience")
     angle = asset.get("Matched Angle")
