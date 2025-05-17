@@ -149,3 +149,23 @@ def run_tagger(sheet_id, folder_id, expected_content=None):
             matched_content,
         ])
     write_to_sheet(sheet_id, rows)
+
+
+if __name__ == "__main__":
+    import argparse
+
+    parser = argparse.ArgumentParser(
+        description="Tag images in a Drive folder and write results to a Google Sheet"
+    )
+    parser.add_argument("sheet_id", help="Destination Google Sheet ID")
+    parser.add_argument("folder_id", help="Source Google Drive folder ID")
+    parser.add_argument(
+        "-e",
+        "--expected-content",
+        nargs="*",
+        default=[],
+        help="Additional expected content tags",
+    )
+
+    args = parser.parse_args()
+    run_tagger(args.sheet_id, args.folder_id, args.expected_content)
