@@ -82,8 +82,10 @@ def generate_recipe_copy(asset, layout, copy_format, brand, *, audience=None, an
     angle = angle if angle is not None else asset.get("Matched Angle")
     descriptors = asset.get("Descriptors", "")
     tone = brand.get("Copy Tone", "neutral")
+    brand_name = brand.get("Brand Name", "")
     prompt = f"""
 You're an expert Meta ad copywriter. Generate copy that matches the following structure and purpose:
+🏢 Brand: {brand_name}
 📌 Layout: {layout.get('Name')} — {layout.get('Use Case')}
 🖋 Copy Format: {copy_format.get('Name')} — {copy_format.get('Use Case')}
 ✍️ You MUST format the ad using this structure — do not deviate:

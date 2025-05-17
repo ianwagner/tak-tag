@@ -54,7 +54,10 @@ password = st.text_input("🔒 Enter password", type="password")
 if password != app_password:
     st.stop()
 
-tab1, tab2, tab3 = st.tabs(["🧠 Tag Assets", "📋 Generate Recipes", "🏷 Brands"])
+if "show_brand" not in st.session_state:
+    st.session_state["show_brand"] = False
+
+tab1, tab2 = st.tabs(["🧠 Tag Assets", "📋 Generate Recipes"])
 with tab1:
     st.title("🧠 Tag Image Assets")
     sheet_id = st.text_input("Google Sheet ID (for tagged assets)", key="tag_sheet")
@@ -73,108 +76,137 @@ with tab1:
 
 with tab2:
     st.title("📋 Generate Creative Recipes")
-    recipe_sheet_id = st.text_input("Tagged Asset Sheet ID", key="recipe_sheet")
-    image_folder_id = st.text_input("Google Drive Folder ID (for image links)", key="asset_folder")
-    brand_code = st.text_input("Brand Code (matches brand tab)", key="brand_code")
+    col_main, col_right = st.columns([3, 1])
+    with col_right:
+        if st.button("🏷 Manage Brands", key="toggle_brand"):
+            st.session_state.show_brand = not st.session_state.show_brand
+    with col_main:
+        recipe_sheet_id = st.text_input("Tagged Asset Sheet ID", key="recipe_sheet")
+        image_folder_id = st.text_input("Google Drive Folder ID (for image links)", key="asset_folder")
+        brand_code = st.text_input("Brand Code (matches brand list)", key="brand_code")
 
-    try:
-        layout_options, copy_options = load_layout_copy_options(SERVICE_ACCOUNT_INFO)
-    except Exception as e:
-        st.warning(f"⚠ Could not load layout/copy options: {e}")
-        layout_options = []
-        copy_options = []
-
-    selected_layouts = st.multiselect("Select Layouts", options=layout_options, default=layout_options)
-    selected_copy_formats = st.multiselect("Select Copy Formats", options=copy_options, default=copy_options)
-
-    angles_input = st.text_area("Angles (comma-separated)")
-    audiences_input = st.text_area("Audiences (comma-separated)")
-    offers_input = st.text_area("Offers (comma-separated)")
-
-    num_recipes = st.number_input("How many recipes to generate?", min_value=1, max_value=100, value=10)
-
-    if st.button("Generate Recipes"):
         try:
-            st.info("Generating recipes...")
-            recipes = generate_recipes(
-                recipe_sheet_id,
-                SERVICE_ACCOUNT_INFO,
-                image_folder_id,
-                brand_code,
-                BRAND_SHEET_ID,
-                num_recipes,
-                angles=[a.strip() for a in angles_input.split(',') if a.strip()],
-                audiences=[a.strip() for a in audiences_input.split(',') if a.strip()],
-                offers=[o.strip() for o in offers_input.split(',') if o.strip()],
-                selected_layouts=selected_layouts,
-                selected_copy_formats=selected_copy_formats,
-            )
-            st.success("✅ Recipes generated. Check your Google Sheet.")
+            layout_options, copy_options = load_layout_copy_options(SERVICE_ACCOUNT_INFO)
         except Exception as e:
-            st.error(f"❌ Error: {e}")
+            st.warning(f"⚠ Could not load layout/copy options: {e}")
+            layout_options = []
+            copy_options = []
 
-with tab3:
-    st.title("🏷 Manage Brand Guidelines")
-    try:
-        sheets_service = get_google_service(SERVICE_ACCOUNT_INFO)[0]
-        result = sheets_service.spreadsheets().values().get(
-            spreadsheetId=BRAND_SHEET_ID,
-            range="brands"
-        ).execute()
-        brands_data = result.get("values", [])[1:]
-        brand_options = [f"{row[0]} - {row[1]}" for row in brands_data]
-        selected_brand = st.selectbox("Select Existing Brand (or scroll down to add new)", options=[""] + brand_options)
+        selected_layouts = st.multiselect("Select Layouts", options=layout_options, default=layout_options)
+        selected_copy_formats = st.multiselect("Select Copy Formats", options=copy_options, default=copy_options)
 
-        brand_code = brand_name = guideline_source = guideline_link = copy_tone = keywords = formatting_notes = ""
-        if selected_brand:
-            selected_row = brands_data[brand_options.index(selected_brand)]
-            selected_row = (selected_row + [""] * 7)[:7]
-            brand_code, brand_name, guideline_source, guideline_link, copy_tone, keywords, formatting_notes = selected_row
-    except Exception as e:
-        st.warning(f"⚠ Could not load existing brands: {e}")
-        selected_brand = ""
-        brand_code = brand_name = guideline_source = guideline_link = copy_tone = keywords = formatting_notes = ""
+        angles_input = st.text_area("Angles (comma-separated)")
+        audiences_input = st.text_area("Audiences (comma-separated)")
+        offers_input = st.text_area("Offers (comma-separated)")
 
-    st.text_input("Brand Code", value=brand_code, key="bc")
-    st.text_input("Brand Name", value=brand_name, key="bn")
-    guideline_source = st.selectbox("Guideline Source", options=["link", "upload"], index=0 if guideline_source == "link" else 1)
-    st.text_input("Guideline Link", value=guideline_link, key="gl")
-    st.text_input("Copy Tone", value=copy_tone, key="ct")
-    st.text_area("Keywords", value=keywords, key="kw")
-    st.text_area("Formatting Notes", value=formatting_notes, key="fn")
+        num_recipes = st.number_input("How many recipes to generate?", min_value=1, max_value=100, value=10)
 
-    if st.button("➕ Add Brand to Sheet"):
+        if st.button("Generate Recipes"):
+            try:
+                st.info("Generating recipes...")
+                recipes = generate_recipes(
+                    recipe_sheet_id,
+                    SERVICE_ACCOUNT_INFO,
+                    image_folder_id,
+                    brand_code,
+                    BRAND_SHEET_ID,
+                    num_recipes,
+                    angles=[a.strip() for a in angles_input.split(',') if a.strip()],
+                    audiences=[a.strip() for a in audiences_input.split(',') if a.strip()],
+                    offers=[o.strip() for o in offers_input.split(',') if o.strip()],
+                    selected_layouts=selected_layouts,
+                    selected_copy_formats=selected_copy_formats,
+                )
+                st.success("✅ Recipes generated. Check your Google Sheet.")
+            except Exception as e:
+                st.error(f"❌ Error: {e}")
+
+    if st.session_state.show_brand:
+        st.subheader("🏷 Manage Brand Guidelines")
         try:
-            new_row = [[
-                brand_code,
-                brand_name,
-                guideline_source,
-                guideline_link,
-                copy_tone,
-                keywords,
-                formatting_notes
-            ]]
+            sheets_service = get_google_service(SERVICE_ACCOUNT_INFO)[0]
             result = sheets_service.spreadsheets().values().get(
                 spreadsheetId=BRAND_SHEET_ID,
                 range="brands"
             ).execute()
-            existing = result.get("values", [])
-            if not existing or existing[0][0] != "Brand Code":
-                headers = ["Brand Code", "Brand Name", "Guideline Source", "Guideline Link", "Copy Tone", "Keywords", "Formatting Notes"]
+            brands_data = result.get("values", [])[1:]
+            brand_options = [f"{row[0]} - {row[1]}" for row in brands_data]
+            selected_brand = st.selectbox(
+                "Select Existing Brand (or scroll down to add new)",
+                options=[""] + brand_options,
+            )
+
+            brand_code = brand_name = guideline_source = guideline_link = copy_tone = keywords = formatting_notes = ""
+            if selected_brand:
+                selected_row = brands_data[brand_options.index(selected_brand)]
+                selected_row = (selected_row + [""] * 7)[:7]
+                (
+                    brand_code,
+                    brand_name,
+                    guideline_source,
+                    guideline_link,
+                    copy_tone,
+                    keywords,
+                    formatting_notes,
+                ) = selected_row
+        except Exception as e:
+            st.warning(f"⚠ Could not load existing brands: {e}")
+            selected_brand = ""
+            brand_code = brand_name = guideline_source = guideline_link = copy_tone = keywords = formatting_notes = ""
+
+        st.text_input("Brand Code", value=brand_code, key="bc")
+        st.text_input("Brand Name", value=brand_name, key="bn")
+        guideline_source = st.selectbox(
+            "Guideline Source",
+            options=["link", "upload"],
+            index=0 if guideline_source == "link" else 1,
+        )
+        st.text_input("Guideline Link", value=guideline_link, key="gl")
+        st.text_input("Copy Tone", value=copy_tone, key="ct")
+        st.text_area("Keywords", value=keywords, key="kw")
+        st.text_area("Formatting Notes", value=formatting_notes, key="fn")
+
+        if st.button("➕ Add Brand to Sheet"):
+            try:
+                new_row = [[
+                    brand_code,
+                    brand_name,
+                    guideline_source,
+                    guideline_link,
+                    copy_tone,
+                    keywords,
+                    formatting_notes,
+                ]]
+                result = sheets_service.spreadsheets().values().get(
+                    spreadsheetId=BRAND_SHEET_ID,
+                    range="brands",
+                ).execute()
+                existing = result.get("values", [])
+                if not existing or existing[0][0] != "Brand Code":
+                    headers = [
+                        "Brand Code",
+                        "Brand Name",
+                        "Guideline Source",
+                        "Guideline Link",
+                        "Copy Tone",
+                        "Keywords",
+                        "Formatting Notes",
+                    ]
+                    sheets_service.spreadsheets().values().update(
+                        spreadsheetId=BRAND_SHEET_ID,
+                        range="brands!A1",
+                        valueInputOption="RAW",
+                        body={"values": [headers]},
+                    ).execute()
+                    existing = [headers]
+                insert_range = f"brands!A{len(existing)+1}"
                 sheets_service.spreadsheets().values().update(
                     spreadsheetId=BRAND_SHEET_ID,
-                    range="brands!A1",
+                    range=insert_range,
                     valueInputOption="RAW",
-                    body={"values": [headers]}
+                    body={"values": new_row},
                 ).execute()
-                existing = [headers]
-            insert_range = f"brands!A{len(existing)+1}"
-            sheets_service.spreadsheets().values().update(
-                spreadsheetId=BRAND_SHEET_ID,
-                range=insert_range,
-                valueInputOption="RAW",
-                body={"values": new_row}
-            ).execute()
-            st.success("✅ Brand profile added.")
-        except Exception as e:
-            st.error(f"❌ Failed to add brand: {e}")
+                st.success("✅ Brand profile added.")
+            except Exception as e:
+                st.error(f"❌ Failed to add brand: {e}")
+
