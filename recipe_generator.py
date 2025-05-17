@@ -52,13 +52,13 @@ def choose_recipe_components(layouts_df, copy_df):
 def get_brand_profile(brand_df, brand_code):
     profile = brand_df[brand_df['Brand Code'] == brand_code]
     return profile.iloc[0].to_dict() if not profile.empty else {}
-def generate_recipe_copy(asset, layout, copy_format, brand):
+def generate_recipe_copy(asset, layout, copy_format, brand, *, audience=None, angle=None, offer=None):
     style = copy_format.get("Prompt Style", "").strip()
     if not style:
         style = "⚠️"
     product = asset.get("Matched Product")
-    audience = asset.get("Matched Audience")
-    angle = asset.get("Matched Angle")
+    audience = audience if audience is not None else asset.get("Matched Audience")
+    angle = angle if angle is not None else asset.get("Matched Angle")
     descriptors = asset.get("Descriptors", "")
     tone = brand.get("Copy Tone", "neutral")
     keywords = brand.get("Keywords", "")
@@ -71,6 +71,7 @@ You're an expert Meta ad copywriter. Generate copy that matches the following st
 🏷 Audience: {audience}
 📦 Product: {product}
 💡 Angle: {angle}
+🎁 Offer: {offer or ''}
 🎯 Descriptors: {descriptors}
 🗣 Tone: {tone}
 Return only the finished ad copy.
@@ -89,16 +90,46 @@ Return only the finished ad copy.
         return response.choices[0].message.content.strip().strip('"').strip("\'")
     except Exception as e:
         return f"ERROR: {e}"
-def generate_recipes(sheet_id, service_account_info, folder_id, brand_code, brand_sheet_id, num_recipes=10):
+def generate_recipes(
+    sheet_id,
+    service_account_info,
+    folder_id,
+    brand_code,
+    brand_sheet_id,
+    num_recipes=10,
+    *,
+    angles=None,
+    audiences=None,
+    offers=None,
+    selected_layouts=None,
+    selected_copy_formats=None,
+):
     sheets_service, drive_service = get_google_service(service_account_info)
     # Load all relevant sheets
     layouts_df = read_sheet(sheets_service, LAYOUT_COPY_SHEET_ID, 'layouts')
     copy_df = read_sheet(sheets_service, LAYOUT_COPY_SHEET_ID, 'copy_formats')
+
+    if selected_layouts:
+        layouts_df = layouts_df[layouts_df['Name'].isin(selected_layouts)]
+    if selected_copy_formats:
+        copy_df = copy_df[copy_df['Name'].isin(selected_copy_formats)]
     asset_df = read_sheet(sheets_service, sheet_id, 'Sheet1')
     brand_df = read_sheet(sheets_service, brand_sheet_id, 'brands')
     brand = get_brand_profile(brand_df, brand_code)
     tagged_assets = asset_df.to_dict(orient='records')
-    output = [["Ad id", "Layout", "Copy Format", "Audience", "Product", "Angle", "Asset 1 Link", "Asset 2 Link", "Copy", "Notes"]]
+    output = [[
+        "Ad id",
+        "Layout",
+        "Copy Format",
+        "Audience",
+        "Product",
+        "Angle",
+        "Offer",
+        "Asset 1 Link",
+        "Asset 2 Link",
+        "Copy",
+        "Notes",
+    ]]
     for i in range(num_recipes):
         layout, copy_format = choose_recipe_components(layouts_df, copy_df)
         ad_id = f"{brand_code}-P{i+1:03d}"
@@ -118,14 +149,30 @@ def generate_recipes(sheet_id, service_account_info, folder_id, brand_code, bran
         # Extract key info
         links = [get_asset_link(drive_service, a.get("Image Name"), folder_id) for a in selected_assets]
         first_asset = selected_assets[0]
-        ad_copy = generate_recipe_copy(first_asset, layout, copy_format, brand)
+        chosen_audience = (
+            random.choice(audiences) if audiences else first_asset.get("Matched Audience", "")
+        )
+        chosen_angle = (
+            random.choice(angles) if angles else first_asset.get("Matched Angle", "")
+        )
+        chosen_offer = random.choice(offers) if offers else ""
+        ad_copy = generate_recipe_copy(
+            first_asset,
+            layout,
+            copy_format,
+            brand,
+            audience=chosen_audience,
+            angle=chosen_angle,
+            offer=chosen_offer,
+        )
         output.append([
             ad_id,
             layout.get("Name"),
             copy_format.get("Name"),
-            first_asset.get("Matched Audience", ""),
+            chosen_audience,
             first_asset.get("Matched Product", ""),
-            first_asset.get("Matched Angle", ""),
+            chosen_angle,
+            chosen_offer,
             links[0] if len(links) > 0 else "",
             links[1] if len(links) > 1 else "",
             ad_copy,
