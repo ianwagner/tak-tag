@@ -128,6 +128,7 @@ with tab3:
         brand_code = brand_name = guideline_source = guideline_link = copy_tone = keywords = formatting_notes = ""
         if selected_brand:
             selected_row = brands_data[brand_options.index(selected_brand)]
+            selected_row = (selected_row + [""] * 7)[:7]
             brand_code, brand_name, guideline_source, guideline_link, copy_tone, keywords, formatting_notes = selected_row
     except Exception as e:
         st.warning(f"⚠ Could not load existing brands: {e}")
