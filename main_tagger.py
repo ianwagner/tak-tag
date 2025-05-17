@@ -5,6 +5,7 @@ import toml
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseDownload
+from googleapiclient.errors import HttpError
 from google.cloud import vision
 from chat_classifier import chat_classify
 
@@ -36,8 +37,12 @@ def analyze_image(file_id):
     request = drive_service.files().get_media(fileId=file_id)
     fh = io.BytesIO()
     downloader = MediaIoBaseDownload(fh, request)
-    while not downloader.next_chunk()[1]:
-        pass
+    done = False
+    try:
+        while not done:
+            _, done = downloader.next_chunk()
+    except HttpError as e:
+        raise RuntimeError(f"Failed to download file {file_id}: {e}")
 
     image = vision.Image(content=fh.getvalue())
 
