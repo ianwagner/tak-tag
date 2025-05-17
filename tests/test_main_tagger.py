@@ -72,7 +72,7 @@ builtins.open = _open
 def test_run_tagger_outputs_basic_columns(monkeypatch):
     captured = {}
 
-    def fake_write(sheet_id, rows):
+    def fake_write(sheet_id, rows, sheet_name):
         captured['rows'] = rows
 
     monkeypatch.setattr(main_tagger, 'write_to_sheet', fake_write)
@@ -80,7 +80,7 @@ def test_run_tagger_outputs_basic_columns(monkeypatch):
     monkeypatch.setattr(main_tagger, 'analyze_image', lambda fid: (['label'], ['web']))
     monkeypatch.setattr(main_tagger, 'chat_classify', lambda *a, **k: {'descriptors': ['desc'], 'match_content': 'match'})
 
-    main_tagger.run_tagger('sid', 'fid', ['x'])
+    main_tagger.run_tagger('sid', 'fid', ['x'], 'Sheet1')
 
     assert captured['rows'][0] == ['Image Name', 'Image Link', 'Google Labels', 'Google Web Entities', 'Descriptors', 'Matched Content']
     assert captured['rows'][1] == ['img', 'link', 'label', 'web', 'desc', 'match']

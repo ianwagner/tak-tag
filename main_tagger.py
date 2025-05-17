@@ -87,7 +87,7 @@ def analyze_image(file_id):
 
     return labels, web_labels
 
-def write_to_sheet(sheet_id, rows):
+def write_to_sheet(sheet_id, rows, sheet_name="Sheet1"):
     """Append rows to a Google Sheet.
 
     Parameters
@@ -96,6 +96,8 @@ def write_to_sheet(sheet_id, rows):
         Destination Google Sheet ID.
     rows : list[list[str]]
         Data rows to append.
+    sheet_name : str, optional
+        Worksheet name within the spreadsheet. Defaults to ``"Sheet1"``.
 
     Returns
     -------
@@ -104,13 +106,13 @@ def write_to_sheet(sheet_id, rows):
 
     sheets_service.spreadsheets().values().append(
         spreadsheetId=sheet_id,
-        range='A1',
+        range=f"{sheet_name}!A1",
         valueInputOption='RAW',
         insertDataOption='INSERT_ROWS',
         body={'values': rows}
     ).execute()
 
-def run_tagger(sheet_id, folder_id, expected_content=None):
+def run_tagger(sheet_id, folder_id, expected_content=None, sheet_name="Sheet1"):
     """Tag images in a Drive folder and write results to a Google Sheet.
 
     Parameters
@@ -121,6 +123,8 @@ def run_tagger(sheet_id, folder_id, expected_content=None):
         Source Drive folder containing images.
     expected_content : list[str] | None, optional
         Additional content tags to classify. Defaults to ``[]`` if not provided.
+    sheet_name : str, optional
+        Name of the worksheet within the spreadsheet. Defaults to ``"Sheet1"``.
     """
 
     expected_content = expected_content or []
@@ -148,4 +152,4 @@ def run_tagger(sheet_id, folder_id, expected_content=None):
             descriptors,
             matched_content,
         ])
-    write_to_sheet(sheet_id, rows)
+    write_to_sheet(sheet_id, rows, sheet_name)
