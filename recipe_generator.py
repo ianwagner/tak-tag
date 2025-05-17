@@ -13,6 +13,14 @@ SCOPES = [
 ]
 # Layout and copy sheet
 LAYOUT_COPY_SHEET_ID = "1M_-6UqmSE8yAlaSQl3EoGRZfdkzklb0Qpy2wwJmYq8E"
+"""Utilities for generating ad recipes from tagged assets.
+
+This module assumes the tagged assets sheet includes the legacy
+``Matched Audience``, ``Matched Product`` and ``Matched Angle`` columns.
+If these columns are missing (e.g., when using the simplified tagging
+output from :func:`run_tagger`), the generated recipes may be incomplete
+or inaccurate.
+"""
 def get_google_service(service_account_info):
     credentials = service_account.Credentials.from_service_account_info(
         service_account_info, scopes=SCOPES)
