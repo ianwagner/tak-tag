@@ -2,6 +2,7 @@
 import streamlit as st
 import toml
 import json
+from streamlit_tags import st_tags
 from main_tagger import run_tagger
 from recipe_generator import generate_recipes, read_sheet, LAYOUT_COPY_SHEET_ID
 from google.oauth2 import service_account
@@ -46,19 +47,13 @@ with tab1:
     sheet_id = st.text_input("Google Sheet ID (for tagged assets)", key="tag_sheet")
     folder_id = st.text_input("Google Drive Folder ID (image folder)")
 
-    st.subheader("Expected Tags (used for classification)")
-    audiences = st.text_input("Expected Audiences", value="mom, teen, athlete, grandma")
-    products = st.text_input("Expected Products", value="deodorant, concealer, sneakers")
-    angles = st.text_input("Expected Angles", value="confidence, natural beauty, performance")
-
-    expected_audiences = [a.strip().lower() for a in audiences.split(",") if a.strip()]
-    expected_products = [p.strip().lower() for p in products.split(",") if p.strip()]
-    expected_angles = [a.strip().lower() for a in angles.split(",") if a.strip()]
+    st.subheader("Expected Content")
+    expected_content = st_tags(label="Add tags", key="expected_content")
 
     if st.button("Run Tagging"):
         try:
             st.info("Tagging images...")
-            run_tagger(sheet_id, folder_id, expected_audiences, expected_products, expected_angles)
+            run_tagger(sheet_id, folder_id, expected_content)
             st.success("✅ Tagging complete. Check your Google Sheet.")
         except Exception as e:
             st.error(f"❌ Error: {e}")
