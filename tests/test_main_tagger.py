@@ -78,9 +78,39 @@ def test_run_tagger_outputs_basic_columns(monkeypatch):
     monkeypatch.setattr(main_tagger, 'write_to_sheet', fake_write)
     monkeypatch.setattr(main_tagger, 'list_images', lambda fid: [{'id': '1', 'name': 'img', 'webViewLink': 'link'}])
     monkeypatch.setattr(main_tagger, 'analyze_image', lambda fid: (['label'], ['web']))
-    monkeypatch.setattr(main_tagger, 'chat_classify', lambda *a, **k: {'descriptors': ['desc'], 'match_content': 'match'})
+    monkeypatch.setattr(
+        main_tagger,
+        'chat_classify',
+        lambda *a, **k: {
+            'descriptors': ['desc'],
+            'match_content': 'match',
+            'audience': 'aud',
+            'product': 'prod',
+            'angle': 'ang',
+        },
+    )
 
     main_tagger.run_tagger('sid', 'fid', ['x'])
 
-    assert captured['rows'][0] == ['Image Name', 'Image Link', 'Google Labels', 'Google Web Entities', 'Descriptors', 'Matched Content']
-    assert captured['rows'][1] == ['img', 'link', 'label', 'web', 'desc', 'match']
+    assert captured['rows'][0] == [
+        'Image Name',
+        'Image Link',
+        'Google Labels',
+        'Google Web Entities',
+        'Descriptors',
+        'Matched Content',
+        'Audience',
+        'Product',
+        'Angle',
+    ]
+    assert captured['rows'][1] == [
+        'img',
+        'link',
+        'label',
+        'web',
+        'desc',
+        'match',
+        'aud',
+        'prod',
+        'ang',
+    ]
