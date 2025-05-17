@@ -80,8 +80,10 @@ def analyze_image(file_id):
         ]
     })
 
-    labels = [label.description for label in response.label_annotations]
-    web_labels = [entity.description for entity in response.web_detection.web_entities]
+    labels = [label.description for label in getattr(response, 'label_annotations', [])]
+    web_detection = getattr(response, 'web_detection', None)
+    entities = getattr(web_detection, 'web_entities', []) if web_detection else []
+    web_labels = [entity.description for entity in entities]
 
     return labels, web_labels
 
