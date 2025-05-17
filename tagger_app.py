@@ -23,7 +23,7 @@ def get_google_service(service_account_info):
     )
     return build('sheets', 'v4', credentials=credentials), build('drive', 'v3', credentials=credentials)
 
-BRAND_SHEET_ID = "1j74m77q9LIUBv1DJdSGA4cAx4pADXznSD-_RBVosG7g"  # Replace with actual sheet ID
+BRAND_SHEET_ID = "1j74m77q9LIUBv1DJdSGA4cAx4pADXznSD-_RBVosG7g"  # Set to your Google Sheet ID; remove this note if the ID is final
 
 st.set_page_config(page_title="StudioTAK Tagger + Recipe Builder", layout="centered")
 
