@@ -140,4 +140,3 @@ def generate_recipes(sheet_id, service_account_info, folder_id, brand_code, bran
         body={"values": output}
     ).execute()
     return output
-    recipes.append(recipe)
