@@ -3,7 +3,7 @@ import streamlit as st
 import toml
 import json
 from main_tagger import run_tagger
-from recipe_generator import generate_recipes
+from recipe_generator import generate_recipes, read_sheet, LAYOUT_COPY_SHEET_ID
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 
@@ -61,6 +61,24 @@ with tab2:
     image_folder_id = st.text_input("Google Drive Folder ID (for image links)", key="asset_folder")
     brand_code = st.text_input("Brand Code (matches brand tab)", key="brand_code")
 
+    try:
+        sheets_service = get_google_service(SERVICE_ACCOUNT_INFO)[0]
+        layouts_df = read_sheet(sheets_service, LAYOUT_COPY_SHEET_ID, 'layouts')
+        copy_df = read_sheet(sheets_service, LAYOUT_COPY_SHEET_ID, 'copy_formats')
+        layout_options = layouts_df['Name'].tolist()
+        copy_options = copy_df['Name'].tolist()
+    except Exception as e:
+        st.warning(f"⚠ Could not load layout/copy options: {e}")
+        layout_options = []
+        copy_options = []
+
+    selected_layouts = st.multiselect("Select Layouts", options=layout_options, default=layout_options)
+    selected_copy_formats = st.multiselect("Select Copy Formats", options=copy_options, default=copy_options)
+
+    angles_input = st.text_area("Angles (comma-separated)")
+    audiences_input = st.text_area("Audiences (comma-separated)")
+    offers_input = st.text_area("Offers (comma-separated)")
+
     num_recipes = st.number_input("How many recipes to generate?", min_value=1, max_value=100, value=10)
 
     if st.button("Generate Recipes"):
@@ -72,7 +90,12 @@ with tab2:
                 image_folder_id,
                 brand_code,
                 BRAND_SHEET_ID,
-                num_recipes
+                num_recipes,
+                angles=[a.strip() for a in angles_input.split(',') if a.strip()],
+                audiences=[a.strip() for a in audiences_input.split(',') if a.strip()],
+                offers=[o.strip() for o in offers_input.split(',') if o.strip()],
+                selected_layouts=selected_layouts,
+                selected_copy_formats=selected_copy_formats,
             )
             st.success("✅ Recipes generated. Check your Google Sheet.")
         except Exception as e:
