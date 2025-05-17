@@ -3,9 +3,14 @@ import os
 import json
 import random
 import pandas as pd
+import logging
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
+# Configure basic logging
+logger = logging.getLogger(__name__)
+if not logger.hasHandlers():
+    logging.basicConfig(level=logging.INFO)
 # Scopes for Sheets and Drive
 SCOPES = [
     'https://www.googleapis.com/auth/spreadsheets',
@@ -69,7 +74,6 @@ def generate_recipe_copy(asset, layout, copy_format, brand, *, audience=None, an
     angle = angle if angle is not None else asset.get("Matched Angle")
     descriptors = asset.get("Descriptors", "")
     tone = brand.get("Copy Tone", "neutral")
-    keywords = brand.get("Keywords", "")
     prompt = f"""
 You're an expert Meta ad copywriter. Generate copy that matches the following structure and purpose:
 📌 Layout: {layout.get('Name')} — {layout.get('Use Case')}
@@ -84,7 +88,7 @@ You're an expert Meta ad copywriter. Generate copy that matches the following st
 🗣 Tone: {tone}
 Return only the finished ad copy.
 """
-    print("=== PROMPT SENT TO GPT ===\n" + prompt)
+    logger.debug("=== PROMPT SENT TO GPT ===\n%s", prompt)
     client = openai.OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
     try:
         response = client.chat.completions.create(
