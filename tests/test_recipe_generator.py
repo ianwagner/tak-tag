@@ -185,3 +185,39 @@ def test_generate_recipes_filters_layouts_and_copy(monkeypatch):
 
     assert output[1][1] == selected_layout
     assert output[1][2] == selected_copy
+
+
+def test_read_sheet_handles_mismatched_rows(monkeypatch):
+    rows = [
+        ["A", "B", "C"],
+        ["1", "2"],
+        ["3", "4", "5", "6"],
+    ]
+
+    def make_service(values):
+        def execute():
+            return {"values": values}
+
+        def get(spreadsheetId=None, range=None):
+            return types.SimpleNamespace(execute=execute)
+
+        values_obj = types.SimpleNamespace(get=get)
+        spreadsheets_obj = types.SimpleNamespace(values=lambda: values_obj)
+        return types.SimpleNamespace(spreadsheets=lambda: spreadsheets_obj)
+
+    class FakeDataFrame:
+        def __init__(self, data, columns=None):
+            self.data = list(data)
+            self.columns = list(columns or [])
+
+    fake_pd = types.SimpleNamespace(
+        DataFrame=lambda data, columns=None: FakeDataFrame(data, columns)
+    )
+
+    service = make_service(rows)
+    monkeypatch.setattr(recipe_generator, "pd", fake_pd)
+
+    df = recipe_generator.read_sheet(service, "sid", "sheet")
+
+    assert df.columns == ["A", "B", "C"]
+    assert df.data == [["1", "2", ""], ["3", "4", "5"]]

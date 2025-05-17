@@ -35,14 +35,22 @@ def get_google_service(service_account_info):
 def read_sheet(service, spreadsheet_id, sheet_name):
     result = service.spreadsheets().values().get(
         spreadsheetId=spreadsheet_id,
-        range=sheet_name
+        range=sheet_name,
     ).execute()
-    rows = result.get('values', [])
+    rows = result.get("values", [])
     if not rows:
         return pd.DataFrame()
-    headers = rows[0]
-    data = rows[1:]
-    return pd.DataFrame(data, columns=headers)
+
+    header_len = len(rows[0])
+    padded_rows = []
+    for row in rows:
+        if len(row) < header_len:
+            row = row + [""] * (header_len - len(row))
+        else:
+            row = row[:header_len]
+        padded_rows.append(row)
+
+    return pd.DataFrame(padded_rows[1:], columns=padded_rows[0])
 def get_asset_link(drive_service, file_name, folder_id):
     query = f"name = '{file_name}' and '{folder_id}' in parents and mimeType contains 'image/'"
     try:
