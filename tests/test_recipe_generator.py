@@ -164,6 +164,16 @@ def test_generate_recipes_filters_layouts_and_copy(monkeypatch):
     class FakeSpreadsheets:
         def values(self):
             return FakeValues()
+        def get(self, spreadsheetId):
+            class FakeGet:
+                def execute(self_inner):
+                    return {"sheets": [{"properties": {"title": "recipes"}}]}
+            return FakeGet()
+        def batchUpdate(self, **kwargs):
+            class FakeBatch:
+                def execute(self_inner):
+                    pass
+            return FakeBatch()
     class FakeSheetsService:
         def spreadsheets(self):
             return FakeSpreadsheets()
