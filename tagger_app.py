@@ -54,10 +54,7 @@ password = st.text_input("🔒 Enter password", type="password")
 if password != app_password:
     st.stop()
 
-if "show_brand" not in st.session_state:
-    st.session_state["show_brand"] = False
-
-tab1, tab2 = st.tabs(["🧠 Tag Assets", "📋 Generate Recipes"])
+tab1, tab2, tab_brand = st.tabs(["🧠 Tag Assets", "📋 Generate Recipes", "🏷 Manage Brands"])
 with tab1:
     st.title("🧠 Tag Image Assets")
     sheet_id = st.text_input("Google Sheet ID (for tagged assets)", key="tag_sheet")
@@ -76,10 +73,7 @@ with tab1:
 
 with tab2:
     st.title("📋 Generate Creative Recipes")
-    col_main, col_right = st.columns([3, 1])
-    with col_right:
-        if st.button("🏷 Manage Brands", key="toggle_brand"):
-            st.session_state.show_brand = not st.session_state.show_brand
+    col_main, _ = st.columns([3, 1])
     with col_main:
         recipe_sheet_id = st.text_input("Tagged Asset Sheet ID", key="recipe_sheet")
         image_folder_id = st.text_input("Google Drive Folder ID (for image links)", key="asset_folder")
@@ -121,92 +115,92 @@ with tab2:
             except Exception as e:
                 st.error(f"❌ Error: {e}")
 
-    if st.session_state.show_brand:
-        st.subheader("🏷 Manage Brand Guidelines")
+with tab_brand:
+    st.subheader("🏷 Manage Brand Guidelines")
+    try:
+        sheets_service = get_google_service(SERVICE_ACCOUNT_INFO)[0]
+        result = sheets_service.spreadsheets().values().get(
+            spreadsheetId=BRAND_SHEET_ID,
+            range="brands"
+        ).execute()
+        brands_data = result.get("values", [])[1:]
+        brand_options = [f"{row[0]} - {row[1]}" for row in brands_data]
+        selected_brand = st.selectbox(
+            "Select Existing Brand (or scroll down to add new)",
+            options=[""] + brand_options,
+        )
+
+        brand_code = brand_name = guideline_source = guideline_link = copy_tone = keywords = formatting_notes = ""
+        if selected_brand:
+            selected_row = brands_data[brand_options.index(selected_brand)]
+            selected_row = (selected_row + [""] * 7)[:7]
+            (
+                brand_code,
+                brand_name,
+                guideline_source,
+                guideline_link,
+                copy_tone,
+                keywords,
+                formatting_notes,
+            ) = selected_row
+    except Exception as e:
+        st.warning(f"⚠ Could not load existing brands: {e}")
+        selected_brand = ""
+        brand_code = brand_name = guideline_source = guideline_link = copy_tone = keywords = formatting_notes = ""
+
+    st.text_input("Brand Code", value=brand_code, key="bc")
+    st.text_input("Brand Name", value=brand_name, key="bn")
+    guideline_source = st.selectbox(
+        "Guideline Source",
+        options=["link", "upload"],
+        index=0 if guideline_source == "link" else 1,
+    )
+    st.text_input("Guideline Link", value=guideline_link, key="gl")
+    st.text_input("Copy Tone", value=copy_tone, key="ct")
+    st.text_area("Keywords", value=keywords, key="kw")
+    st.text_area("Formatting Notes", value=formatting_notes, key="fn")
+
+    if st.button("➕ Add Brand to Sheet"):
         try:
-            sheets_service = get_google_service(SERVICE_ACCOUNT_INFO)[0]
+            new_row = [[
+                brand_code,
+                brand_name,
+                guideline_source,
+                guideline_link,
+                copy_tone,
+                keywords,
+                formatting_notes,
+            ]]
             result = sheets_service.spreadsheets().values().get(
                 spreadsheetId=BRAND_SHEET_ID,
-                range="brands"
+                range="brands",
             ).execute()
-            brands_data = result.get("values", [])[1:]
-            brand_options = [f"{row[0]} - {row[1]}" for row in brands_data]
-            selected_brand = st.selectbox(
-                "Select Existing Brand (or scroll down to add new)",
-                options=[""] + brand_options,
-            )
-
-            brand_code = brand_name = guideline_source = guideline_link = copy_tone = keywords = formatting_notes = ""
-            if selected_brand:
-                selected_row = brands_data[brand_options.index(selected_brand)]
-                selected_row = (selected_row + [""] * 7)[:7]
-                (
-                    brand_code,
-                    brand_name,
-                    guideline_source,
-                    guideline_link,
-                    copy_tone,
-                    keywords,
-                    formatting_notes,
-                ) = selected_row
-        except Exception as e:
-            st.warning(f"⚠ Could not load existing brands: {e}")
-            selected_brand = ""
-            brand_code = brand_name = guideline_source = guideline_link = copy_tone = keywords = formatting_notes = ""
-
-        st.text_input("Brand Code", value=brand_code, key="bc")
-        st.text_input("Brand Name", value=brand_name, key="bn")
-        guideline_source = st.selectbox(
-            "Guideline Source",
-            options=["link", "upload"],
-            index=0 if guideline_source == "link" else 1,
-        )
-        st.text_input("Guideline Link", value=guideline_link, key="gl")
-        st.text_input("Copy Tone", value=copy_tone, key="ct")
-        st.text_area("Keywords", value=keywords, key="kw")
-        st.text_area("Formatting Notes", value=formatting_notes, key="fn")
-
-        if st.button("➕ Add Brand to Sheet"):
-            try:
-                new_row = [[
-                    brand_code,
-                    brand_name,
-                    guideline_source,
-                    guideline_link,
-                    copy_tone,
-                    keywords,
-                    formatting_notes,
-                ]]
-                result = sheets_service.spreadsheets().values().get(
-                    spreadsheetId=BRAND_SHEET_ID,
-                    range="brands",
-                ).execute()
-                existing = result.get("values", [])
-                if not existing or existing[0][0] != "Brand Code":
-                    headers = [
-                        "Brand Code",
-                        "Brand Name",
-                        "Guideline Source",
-                        "Guideline Link",
-                        "Copy Tone",
-                        "Keywords",
-                        "Formatting Notes",
-                    ]
-                    sheets_service.spreadsheets().values().update(
-                        spreadsheetId=BRAND_SHEET_ID,
-                        range="brands!A1",
-                        valueInputOption="RAW",
-                        body={"values": [headers]},
-                    ).execute()
-                    existing = [headers]
-                insert_range = f"brands!A{len(existing)+1}"
+            existing = result.get("values", [])
+            if not existing or existing[0][0] != "Brand Code":
+                headers = [
+                    "Brand Code",
+                    "Brand Name",
+                    "Guideline Source",
+                    "Guideline Link",
+                    "Copy Tone",
+                    "Keywords",
+                    "Formatting Notes",
+                ]
                 sheets_service.spreadsheets().values().update(
                     spreadsheetId=BRAND_SHEET_ID,
-                    range=insert_range,
+                    range="brands!A1",
                     valueInputOption="RAW",
-                    body={"values": new_row},
+                    body={"values": [headers]},
                 ).execute()
-                st.success("✅ Brand profile added.")
-            except Exception as e:
-                st.error(f"❌ Failed to add brand: {e}")
+                existing = [headers]
+            insert_range = f"brands!A{len(existing)+1}"
+            sheets_service.spreadsheets().values().update(
+                spreadsheetId=BRAND_SHEET_ID,
+                range=insert_range,
+                valueInputOption="RAW",
+                body={"values": new_row},
+            ).execute()
+            st.success("✅ Brand profile added.")
+        except Exception as e:
+            st.error(f"❌ Failed to add brand: {e}")
 
