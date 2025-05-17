@@ -5,7 +5,29 @@ import json
 
 client = openai.OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 
-def chat_classify(labels, web_labels, expected_audiences, expected_products, expected_angles) -> dict:
+def chat_classify(
+    labels,
+    web_labels,
+    expected_audiences,
+    expected_products,
+    expected_angles,
+    expected_content=None,
+) -> dict:
+    """Classify image tags using ChatGPT.
+
+    Parameters
+    ----------
+    labels : list[str]
+        Generic labels returned from Vision API.
+    web_labels : list[str]
+        Web entity labels returned from Vision API.
+    expected_audiences, expected_products, expected_angles : list[str]
+        Category lists for matching.
+    expected_content : list[str] | None, optional
+        Additional content tags to consider. Defaults to ``[]``.
+    """
+
+    expected_content = expected_content or []
     prompt = f"""
 You are an ad tagging assistant. Based on the following image data:
 
@@ -27,6 +49,7 @@ If there's no good match, return "unknown".
 Expected audiences: {', '.join(expected_audiences)}
 Expected products: {', '.join(expected_products)}
 Expected angles: {', '.join(expected_angles)}
+Expected content tags: {', '.join(expected_content)}
 
 Return:
 {{
@@ -50,7 +73,10 @@ Return:
             temperature=0.4,
         )
         content = response.choices[0].message.content
-        return json.loads(content)
+        data = json.loads(content)
+        # Older prompts may omit the optional match_content field
+        data.setdefault("match_content", "unknown")
+        return data
     except Exception as e:
         print("ChatGPT classification error:", e)
         return {
@@ -60,5 +86,6 @@ Return:
             "descriptors": [],
             "match_audience": "unknown",
             "match_product": "unknown",
-            "match_angle": "unknown"
+            "match_angle": "unknown",
+            "match_content": "unknown",
         }
