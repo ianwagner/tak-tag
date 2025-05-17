@@ -3,12 +3,15 @@ import sys
 import types
 
 # Stub external dependencies not installed during tests
+googleapiclient_errors = types.ModuleType('googleapiclient.errors')
+googleapiclient_errors.HttpError = type('HttpError', (Exception,), {})
+
 stub_modules = {
     'openai': types.ModuleType('openai'),
     'pandas': types.ModuleType('pandas'),
     'googleapiclient': types.ModuleType('googleapiclient'),
     'googleapiclient.discovery': types.ModuleType('googleapiclient.discovery'),
-    'googleapiclient.errors': types.ModuleType('googleapiclient.errors'),
+    'googleapiclient.errors': googleapiclient_errors,
 }
 # google.oauth2.service_account has nested modules
 google_module = types.ModuleType('google')
