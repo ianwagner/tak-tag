@@ -16,6 +16,19 @@ app_password = secrets["app_password"]
 SERVICE_ACCOUNT_INFO = json.loads(secrets["google"]["service_account"])
 
 def get_google_service(service_account_info):
+    """Create authorized Google Sheets and Drive clients.
+
+    Parameters
+    ----------
+    service_account_info : dict
+        Service account JSON credentials.
+
+    Returns
+    -------
+    tuple
+        Authorized Sheets and Drive service objects.
+    """
+
     credentials = service_account.Credentials.from_service_account_info(
         service_account_info, scopes=[
             'https://www.googleapis.com/auth/spreadsheets',

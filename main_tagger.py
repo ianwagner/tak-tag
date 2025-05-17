@@ -28,11 +28,37 @@ sheets_service = build('sheets', 'v4', credentials=credentials)
 vision_client = vision.ImageAnnotatorClient(credentials=credentials)
 
 def list_images(folder_id):
+    """List image files in a Google Drive folder.
+
+    Parameters
+    ----------
+    folder_id : str
+        ID of the Google Drive folder.
+
+    Returns
+    -------
+    list[dict]
+        File metadata dictionaries with ``id``, ``name`` and ``webViewLink``.
+    """
+
     query = f"'{folder_id}' in parents and mimeType contains 'image/'"
     response = drive_service.files().list(q=query, fields="files(id, name, webViewLink)").execute()
     return response.get('files', [])
 
 def analyze_image(file_id):
+    """Analyze an image with the Vision API.
+
+    Parameters
+    ----------
+    file_id : str
+        ID of the file to analyze.
+
+    Returns
+    -------
+    tuple[list[str], list[str]]
+        Detected labels and web entity labels.
+    """
+
     request = drive_service.files().get_media(fileId=file_id)
     fh = io.BytesIO()
     downloader = MediaIoBaseDownload(fh, request)
@@ -55,6 +81,20 @@ def analyze_image(file_id):
     return labels, web_labels
 
 def write_to_sheet(sheet_id, rows):
+    """Append rows to a Google Sheet.
+
+    Parameters
+    ----------
+    sheet_id : str
+        Destination Google Sheet ID.
+    rows : list[list[str]]
+        Data rows to append.
+
+    Returns
+    -------
+    None
+    """
+
     sheets_service.spreadsheets().values().append(
         spreadsheetId=sheet_id,
         range='A1',
