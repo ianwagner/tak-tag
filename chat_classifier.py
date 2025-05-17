@@ -55,10 +55,14 @@ Return:
         response = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[
-                {"role": "system", "content": "You are a helpful and structured tag classification assistant."},
-                {"role": "user", "content": prompt.strip()}
+                {
+                    "role": "system",
+                    "content": "You are a helpful and structured tag classification assistant.",
+                },
+                {"role": "user", "content": prompt.strip()},
             ],
             temperature=0.4,
+            response_format={"type": "json_object"},
         )
         content = response.choices[0].message.content
         data = json.loads(content)
