@@ -59,3 +59,129 @@ def test_choose_assets_insufficient_assets():
     selected, needs_generation = recipe_generator.choose_assets(assets, count=1)
     assert selected == []
     assert needs_generation is True
+
+def test_generate_recipe_copy_returns_cleaned(monkeypatch):
+    response_text = '  "Great copy!"  '
+
+    class FakeCompletions:
+        def create(self, *args, **kwargs):
+            message = types.SimpleNamespace(content=response_text)
+            choice = types.SimpleNamespace(message=message)
+            return types.SimpleNamespace(choices=[choice])
+
+    class FakeChat:
+        completions = FakeCompletions()
+
+    class FakeOpenAI:
+        def __init__(self, api_key=None):
+            self.chat = FakeChat()
+
+    monkeypatch.setattr(recipe_generator.openai, 'OpenAI', FakeOpenAI)
+
+    asset = {
+        'Matched Product': 'Widget',
+        'Matched Audience': 'Gamers',
+        'Matched Angle': 'Excitement',
+        'Descriptors': ''
+    }
+    layout = {'Name': 'L1', 'Use Case': 'Test'}
+    copy_format = {'Name': 'C1', 'Use Case': 'Test', 'Prompt Style': 'fun'}
+    brand = {'Copy Tone': 'neutral', 'Keywords': ''}
+
+    result = recipe_generator.generate_recipe_copy(asset, layout, copy_format, brand)
+    assert result == 'Great copy!'
+
+
+def test_generate_recipes_filters_layouts_and_copy(monkeypatch):
+    selected_layout = 'Layout B'
+    selected_copy = 'Copy Y'
+
+    layouts_rows = [
+        {'Name': 'Layout A', 'Use Case': 'A', 'Asset Count': '1'},
+        {'Name': 'Layout B', 'Use Case': 'B', 'Asset Count': '1'},
+    ]
+    copy_rows = [
+        {'Name': 'Copy X', 'Use Case': 'X', 'Prompt Style': 'x'},
+        {'Name': 'Copy Y', 'Use Case': 'Y', 'Prompt Style': 'y'},
+    ]
+    asset_rows = [
+        {'Image Name': 'img', 'Matched Audience': 'Gamers', 'Matched Product': 'P', 'Matched Angle': 'Fun'}
+    ]
+
+    class FakeSeries(list):
+        def isin(self, values):
+            return [v in values for v in self]
+
+    class FakeDF:
+        def __init__(self, rows):
+            self.rows = list(rows)
+
+        def __getitem__(self, key):
+            if isinstance(key, str):
+                return FakeSeries([r.get(key) for r in self.rows])
+            elif isinstance(key, list):
+                filtered = [r for r, keep in zip(self.rows, key) if keep]
+                return FakeDF(filtered)
+            raise TypeError
+
+        def to_dict(self, orient='records'):
+            assert orient == 'records'
+            return self.rows
+
+    def fake_read_sheet(service, sid, sheet_name):
+        if sheet_name == 'layouts':
+            return FakeDF(layouts_rows)
+        if sheet_name == 'copy_formats':
+            return FakeDF(copy_rows)
+        if sheet_name == 'Sheet1':
+            return FakeDF(asset_rows)
+        return FakeDF([])
+
+    def fake_get_brand_profile(df, code):
+        return {'Copy Tone': 'neutral', 'Keywords': ''}
+
+    def fake_choose_recipe_components(l_df, c_df):
+        # Ensure filtering happened
+        assert [r['Name'] for r in l_df.rows] == [selected_layout]
+        assert [r['Name'] for r in c_df.rows] == [selected_copy]
+        return l_df.rows[0], c_df.rows[0]
+
+    def fake_choose_assets(tagged, count):
+        return [asset_rows[0]], False
+
+    def fake_get_asset_link(service, file_name, folder_id):
+        return 'link'
+
+    def fake_generate_recipe_copy(*args, **kwargs):
+        return 'copy'
+
+    class FakeUpdate:
+        def execute(self):
+            pass
+    class FakeValues:
+        def update(self, **kwargs):
+            return FakeUpdate()
+    class FakeSpreadsheets:
+        def values(self):
+            return FakeValues()
+    class FakeSheetsService:
+        def spreadsheets(self):
+            return FakeSpreadsheets()
+    def fake_get_google_service(info):
+        return FakeSheetsService(), object()
+
+    monkeypatch.setattr(recipe_generator, 'read_sheet', fake_read_sheet)
+    monkeypatch.setattr(recipe_generator, 'get_brand_profile', fake_get_brand_profile)
+    monkeypatch.setattr(recipe_generator, 'choose_recipe_components', fake_choose_recipe_components)
+    monkeypatch.setattr(recipe_generator, 'choose_assets', fake_choose_assets)
+    monkeypatch.setattr(recipe_generator, 'get_asset_link', fake_get_asset_link)
+    monkeypatch.setattr(recipe_generator, 'generate_recipe_copy', fake_generate_recipe_copy)
+    monkeypatch.setattr(recipe_generator, 'get_google_service', fake_get_google_service)
+
+    output = recipe_generator.generate_recipes(
+        'sid', {}, 'folder', 'BR', 'brand_sid', num_recipes=1,
+        selected_layouts=[selected_layout], selected_copy_formats=[selected_copy]
+    )
+
+    assert output[1][1] == selected_layout
+    assert output[1][2] == selected_copy
