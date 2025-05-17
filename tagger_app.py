@@ -23,6 +23,14 @@ def get_google_service(service_account_info):
     )
     return build('sheets', 'v4', credentials=credentials), build('drive', 'v3', credentials=credentials)
 
+@st.cache_data(show_spinner=False)
+def load_layout_copy_options(service_account_info):
+    """Fetch layout and copy format options and cache the result."""
+    sheets_service = get_google_service(service_account_info)[0]
+    layouts_df = read_sheet(sheets_service, LAYOUT_COPY_SHEET_ID, 'layouts')
+    copy_df = read_sheet(sheets_service, LAYOUT_COPY_SHEET_ID, 'copy_formats')
+    return layouts_df['Name'].tolist(), copy_df['Name'].tolist()
+
 BRAND_SHEET_ID = "1j74m77q9LIUBv1DJdSGA4cAx4pADXznSD-_RBVosG7g"  # Set to your Google Sheet ID; remove this note if the ID is final
 
 st.set_page_config(page_title="StudioTAK Tagger + Recipe Builder", layout="centered")
@@ -62,11 +70,7 @@ with tab2:
     brand_code = st.text_input("Brand Code (matches brand tab)", key="brand_code")
 
     try:
-        sheets_service = get_google_service(SERVICE_ACCOUNT_INFO)[0]
-        layouts_df = read_sheet(sheets_service, LAYOUT_COPY_SHEET_ID, 'layouts')
-        copy_df = read_sheet(sheets_service, LAYOUT_COPY_SHEET_ID, 'copy_formats')
-        layout_options = layouts_df['Name'].tolist()
-        copy_options = copy_df['Name'].tolist()
+        layout_options, copy_options = load_layout_copy_options(SERVICE_ACCOUNT_INFO)
     except Exception as e:
         st.warning(f"⚠ Could not load layout/copy options: {e}")
         layout_options = []
