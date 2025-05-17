@@ -6,11 +6,8 @@ import json
 client = openai.OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 
 def chat_classify(
-    labels,
-    web_labels,
-    expected_audiences,
-    expected_products,
-    expected_angles,
+    labels: list[str],
+    web_labels: list[str],
     expected_content=None,
 ) -> dict:
     """Classify image tags using ChatGPT.
@@ -21,10 +18,8 @@ def chat_classify(
         Generic labels returned from Vision API.
     web_labels : list[str]
         Web entity labels returned from Vision API.
-    expected_audiences, expected_products, expected_angles : list[str]
-        Category lists for matching.
     expected_content : list[str] | None, optional
-        Additional content tags to consider. Defaults to ``[]``.
+        Additional content tags to consider for matching. Defaults to ``[]``.
     """
 
     expected_content = expected_content or []
@@ -43,13 +38,8 @@ Return a JSON object with:
 - "angle": the emotional or marketing angle (e.g., natural beauty, wellness, performance)
 - "descriptors": a short list of helpful visual or thematic descriptors (e.g., outdoors, close-up, vibrant colors)
 
-Now, match each of your answers to the most relevant value in the provided expected categories below.
-If there's no good match, return "unknown".
-
-Expected audiences: {', '.join(expected_audiences)}
-Expected products: {', '.join(expected_products)}
-Expected angles: {', '.join(expected_angles)}
-Expected content tags: {', '.join(expected_content)}
+Use the following expected content tags to set ``match_content`` to the closest tag or ``unknown`` if nothing is relevant:
+{', '.join(expected_content)}
 
 Return:
 {{
@@ -57,9 +47,7 @@ Return:
   "product": "...",
   "angle": "...",
   "descriptors": ["...", "..."],
-  "match_audience": "...",
-  "match_product": "...",
-  "match_angle": "..."
+  "match_content": "..."
 }}
 """
 
@@ -84,8 +72,5 @@ Return:
             "product": "unknown",
             "angle": "unknown",
             "descriptors": [],
-            "match_audience": "unknown",
-            "match_product": "unknown",
-            "match_angle": "unknown",
             "match_content": "unknown",
         }

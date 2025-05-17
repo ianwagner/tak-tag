@@ -63,7 +63,7 @@ def write_to_sheet(sheet_id, rows):
         body={'values': rows}
     ).execute()
 
-def run_tagger(sheet_id, folder_id, expected_audiences, expected_products, expected_angles, expected_content=None):
+def run_tagger(sheet_id, folder_id, expected_content=None):
     """Tag images in a Drive folder and write results to a Google Sheet.
 
     Parameters
@@ -72,23 +72,14 @@ def run_tagger(sheet_id, folder_id, expected_audiences, expected_products, expec
         Destination Google Sheet ID.
     folder_id : str
         Source Drive folder containing images.
-    expected_audiences : list[str]
-        Possible audience tags.
-    expected_products : list[str]
-        Possible product tags.
-    expected_angles : list[str]
-        Possible angle tags.
     expected_content : list[str] | None, optional
-        Additional content tags to classify. Defaults to ``[]`` if not
-        provided.
+        Additional content tags to classify. Defaults to ``[]`` if not provided.
     """
 
     expected_content = expected_content or []
 
     rows = [['Image Name', 'Image Link', 'Google Labels', 'Google Web Entities',
-             'GPT Audience', 'GPT Product', 'GPT Angle', 'Descriptors',
-             'Matched Audience', 'Matched Product', 'Matched Angle',
-             'Matched Content']]
+             'Descriptors', 'Matched Content']]
     files = list_images(folder_id)
     for file in files:
         labels, web_labels = analyze_image(file['id'])
@@ -96,19 +87,10 @@ def run_tagger(sheet_id, folder_id, expected_audiences, expected_products, expec
         chat_result = chat_classify(
             labels,
             web_labels,
-            expected_audiences,
-            expected_products,
-            expected_angles,
             expected_content,
         )
 
-        gpt_audience = chat_result.get("audience", "unknown")
-        gpt_product = chat_result.get("product", "unknown")
-        gpt_angle = chat_result.get("angle", "unknown")
         descriptors = ', '.join(chat_result.get("descriptors", []))
-        matched_audience = chat_result.get("match_audience", "unknown")
-        matched_product = chat_result.get("match_product", "unknown")
-        matched_angle = chat_result.get("match_angle", "unknown")
         matched_content = chat_result.get("match_content", "unknown")
 
         rows.append([
@@ -116,13 +98,7 @@ def run_tagger(sheet_id, folder_id, expected_audiences, expected_products, expec
             file['webViewLink'],
             ', '.join(labels),
             ', '.join(web_labels),
-            gpt_audience,
-            gpt_product,
-            gpt_angle,
             descriptors,
-            matched_audience,
-            matched_product,
-            matched_angle,
             matched_content,
         ])
     write_to_sheet(sheet_id, rows)
