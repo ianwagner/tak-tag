@@ -191,6 +191,17 @@ def generate_recipes(
             ""
         ])
 
+    # Ensure the destination sheet exists before writing
+    metadata = sheets_service.spreadsheets().get(
+        spreadsheetId=sheet_id
+    ).execute()
+    sheet_titles = [s.get("properties", {}).get("title") for s in metadata.get("sheets", [])]
+    if "recipes" not in sheet_titles:
+        sheets_service.spreadsheets().batchUpdate(
+            spreadsheetId=sheet_id,
+            body={"requests": [{"addSheet": {"properties": {"title": "recipes"}}}]},
+        ).execute()
+
     # Write output to Google Sheet
     sheets_service.spreadsheets().values().update(
         spreadsheetId=sheet_id,
