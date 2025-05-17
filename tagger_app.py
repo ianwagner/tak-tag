@@ -32,8 +32,7 @@ password = st.text_input("🔒 Enter password", type="password")
 if password != app_password:
     st.stop()
 
-tab1, tab2, tab3 = st.tabs(["🧠 Tag Assets", "📋 Generate Recipes", "🏷️ Manage Brands"])
-
+tab1, tab2, tab3 = st.tabs(["🧠 Tag Assets", "📋 Generate Recipes", "🏷 Brands"])
 with tab1:
     st.title("🧠 Tag Image Assets")
     sheet_id = st.text_input("Google Sheet ID (for tagged assets)", key="tag_sheet")
@@ -80,8 +79,7 @@ with tab2:
             st.error(f"❌ Error: {e}")
 
 with tab3:
-    st.title("🏷️ Manage Brand Guidelines")
-
+    st.title("🏷 Manage Brand Guidelines")
     try:
         sheets_service = get_google_service(SERVICE_ACCOUNT_INFO)[0]
         result = sheets_service.spreadsheets().values().get(
@@ -97,7 +95,7 @@ with tab3:
             selected_row = brands_data[brand_options.index(selected_brand)]
             brand_code, brand_name, guideline_source, guideline_link, copy_tone, keywords, formatting_notes = selected_row
     except Exception as e:
-        st.warning(f"⚠️ Could not load existing brands: {e}")
+        st.warning(f"⚠ Could not load existing brands: {e}")
         selected_brand = ""
         brand_code = brand_name = guideline_source = guideline_link = copy_tone = keywords = formatting_notes = ""
 
