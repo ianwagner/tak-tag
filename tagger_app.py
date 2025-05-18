@@ -113,12 +113,12 @@ with tab1:
     sheet_id = history_input(
         "Google Sheet URL or ID (for tagged assets)",
         sheet_options,
-        "sheet",
+        "tag_sheet",
     )
     folder_id = history_input(
         "Google Drive Folder URL or ID (image folder)",
         folder_options,
-        "folder",
+        "tag_folder",
     )
 
     st.subheader("Expected Content")
@@ -143,8 +143,8 @@ with tab1:
                     'name': get_file_name(drive_service, final_folder)
                 })
             save_history(HISTORY)
-            st.session_state["sheet_mode"] = "select"
-            st.session_state["folder_mode"] = "select"
+            st.session_state["tag_sheet_mode"] = "select"
+            st.session_state["tag_folder_mode"] = "select"
             st.success("✅ Tagging complete. Check your Google Sheet.")
         except Exception as e:
             st.error(f"❌ Error: {e}")
@@ -156,12 +156,12 @@ with tab2:
         sheet_id = history_input(
             "Google Sheet URL or ID (for tagged assets)",
             sheet_options,
-            "sheet",
+            "recipe_sheet",
         )
         folder_id = history_input(
             "Google Drive Folder URL or ID (for image links)",
             folder_options,
-            "folder",
+            "recipe_folder",
         )
         brand_code = st.text_input("Brand Code (matches brand list)", key="brand_code")
 
@@ -211,8 +211,8 @@ with tab2:
                         'name': get_file_name(drive_service, final_folder)
                     })
                 save_history(HISTORY)
-                st.session_state["sheet_mode"] = "select"
-                st.session_state["folder_mode"] = "select"
+                st.session_state["recipe_sheet_mode"] = "select"
+                st.session_state["recipe_folder_mode"] = "select"
                 st.success("✅ Recipes generated. Check your Google Sheet.")
             except Exception as e:
                 st.error(f"❌ Error: {e}")
