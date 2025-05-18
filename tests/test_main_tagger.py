@@ -114,3 +114,27 @@ def test_run_tagger_outputs_basic_columns(monkeypatch):
         'prod',
         'ang',
     ]
+
+
+def test_run_tagger_parses_urls(monkeypatch):
+    captured = {}
+
+    def fake_write(sheet_id, rows):
+        captured['sheet_id'] = sheet_id
+
+    def fake_list_images(fid):
+        captured['folder_id'] = fid
+        return [{'id': '1', 'name': 'img', 'webViewLink': 'link'}]
+
+    monkeypatch.setattr(main_tagger, 'write_to_sheet', fake_write)
+    monkeypatch.setattr(main_tagger, 'list_images', fake_list_images)
+    monkeypatch.setattr(main_tagger, 'analyze_image', lambda fid: ([], []))
+    monkeypatch.setattr(main_tagger, 'chat_classify', lambda *a, **k: {})
+
+    sheet_url = 'https://docs.google.com/spreadsheets/d/SID/edit'
+    folder_url = 'https://drive.google.com/drive/folders/FID'
+
+    main_tagger.run_tagger(sheet_url, folder_url, [])
+
+    assert captured['sheet_id'] == 'SID'
+    assert captured['folder_id'] == 'FID'

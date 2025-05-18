@@ -59,6 +59,10 @@ Streamlit app writes previously used sheet and folder names to
 menus for quick reuse. Edit or delete this file if you need to clear your
 history.
 
+The command-line utilities initially required just the raw Google IDs. They now
+share the same parsing logic as the Streamlit app so you may provide either full
+Google URLs or the bare IDs.
+
 ### CLI Example
 
 You can call the utility functions from the command line. For example, to tag images:
@@ -66,9 +70,15 @@ You can call the utility functions from the command line. For example, to tag im
 ```bash
 python - <<'PY'
 from main_tagger import run_tagger
-run_tagger('SHEET_ID', 'FOLDER_ID', ['shoes', 'accessories'])
+run_tagger(
+    'https://docs.google.com/spreadsheets/d/SHEET_ID/edit',
+    'https://drive.google.com/drive/folders/FOLDER_ID',
+    ['shoes', 'accessories']
+)
 PY
 ```
+
+IDs alone are also valid inputs.
 
 This writes tag results to the provided Google Sheet. Recipes can be generated in a similar manner using `generate_recipes` from `recipe_generator.py`.
 
