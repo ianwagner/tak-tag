@@ -2,7 +2,6 @@
 import streamlit as st
 import toml
 import json
-import os
 from streamlit_tags import st_tags
 from main_tagger import run_tagger
 from recipe_generator import generate_recipes, read_sheet, LAYOUT_COPY_SHEET_ID
