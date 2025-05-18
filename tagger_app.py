@@ -110,15 +110,15 @@ with tab1:
     sheet_options = {e['name']: e['id'] for e in HISTORY.get('sheets', [])}
     folder_options = {e['name']: e['id'] for e in HISTORY.get('folders', [])}
 
-    tag_sheet_id = history_input(
+    sheet_id = history_input(
         "Google Sheet URL or ID (for tagged assets)",
         sheet_options,
-        "tag_sheet",
+        "sheet",
     )
-    tag_folder_id = history_input(
+    folder_id = history_input(
         "Google Drive Folder URL or ID (image folder)",
         folder_options,
-        "tag_folder",
+        "folder",
     )
 
     st.subheader("Expected Content")
@@ -127,8 +127,8 @@ with tab1:
     if st.button("Run Tagging"):
         try:
             st.info("Tagging images...")
-            final_sheet = tag_sheet_id
-            final_folder = tag_folder_id
+            final_sheet = sheet_id
+            final_folder = folder_id
             run_tagger(final_sheet, final_folder, expected_content)
 
             sheets_service, drive_service = get_google_service(SERVICE_ACCOUNT_INFO)
@@ -153,15 +153,15 @@ with tab2:
     st.title("📋 Generate Creative Recipes")
     col_main, = st.columns([1])
     with col_main:
-        recipe_sheet_id = history_input(
+        sheet_id = history_input(
             "Google Sheet URL or ID (for tagged assets)",
             sheet_options,
-            "recipe_sheet",
+            "sheet",
         )
-        image_folder_id = history_input(
+        folder_id = history_input(
             "Google Drive Folder URL or ID (for image links)",
             folder_options,
-            "asset_folder",
+            "folder",
         )
         brand_code = st.text_input("Brand Code (matches brand list)", key="brand_code")
 
@@ -184,8 +184,8 @@ with tab2:
         if st.button("Generate Recipes"):
             try:
                 st.info("Generating recipes...")
-                final_sheet = recipe_sheet_id
-                final_folder = image_folder_id
+                final_sheet = sheet_id
+                final_folder = folder_id
                 recipes = generate_recipes(
                     final_sheet,
                     SERVICE_ACCOUNT_INFO,
