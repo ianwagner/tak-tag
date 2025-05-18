@@ -7,7 +7,7 @@ from main_tagger import run_tagger
 from recipe_generator import generate_recipes, read_sheet, LAYOUT_COPY_SHEET_ID
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
-from utils import parse_google_id, load_history, save_history
+from utils import parse_google_id, load_history, save_history, build_history_options
 
 # Load app secrets
 with open("secrets.toml", "r") as f:
@@ -107,8 +107,8 @@ if password != app_password:
 tab1, tab2, tab_brand = st.tabs(["🧠 Tag Assets", "📋 Generate Recipes", "🏷 Manage Brands"])
 with tab1:
     st.title("🧠 Tag Image Assets")
-    sheet_options = {e['name']: e['id'] for e in HISTORY.get('sheets', [])}
-    folder_options = {e['name']: e['id'] for e in HISTORY.get('folders', [])}
+    sheet_options = build_history_options(HISTORY.get('sheets', []))
+    folder_options = build_history_options(HISTORY.get('folders', []))
 
     sheet_id = history_input(
         "Google Sheet URL or ID (for tagged assets)",
