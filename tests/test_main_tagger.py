@@ -114,3 +114,27 @@ def test_run_tagger_outputs_basic_columns(monkeypatch):
         'prod',
         'ang',
     ]
+
+
+def test_run_tagger_empty_folder_id_errors_before_api(monkeypatch):
+    called = {}
+
+    class FakeFiles:
+        def list(self, **kwargs):
+            called['called'] = True
+            return types.SimpleNamespace(execute=lambda: {})
+
+    class FakeDrive:
+        def files(self):
+            return FakeFiles()
+
+    monkeypatch.setattr(main_tagger, 'drive_service', FakeDrive())
+
+    try:
+        main_tagger.run_tagger('sid', '', [])
+    except ValueError as e:
+        assert 'folder' in str(e).lower()
+    else:
+        raise AssertionError('ValueError not raised')
+
+    assert 'called' not in called
