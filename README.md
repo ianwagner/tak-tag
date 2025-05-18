@@ -47,6 +47,10 @@ Run the interactive tagging and recipe builder UI:
 streamlit run tagger_app.py
 ```
 
+You can paste entire Google Sheet or Drive URLs into the form fields. The app
+stores sheet and folder names you use in `.tak_history.json` and provides them
+in dropdown menus for quick reuse.
+
 ### CLI Example
 
 You can call the utility functions from the command line. For example, to tag images:
