@@ -19,7 +19,7 @@ HISTORY = load_history()
 
 
 def history_input(label, options, key_prefix):
-    """Return an ID from saved options or new entry using a single selector.
+    """Return an ID from saved options or new entry using a single widget.
 
     Parameters
     ----------
@@ -36,16 +36,26 @@ def history_input(label, options, key_prefix):
         The selected or entered ID string.
     """
 
-    choice_label = "Enter new..."
-    select = st.selectbox(
-        label,
-        options=list(options.keys()) + [choice_label],
-        key=f"{key_prefix}_select",
-    )
-    if select == choice_label:
-        value = st.text_input(label, key=f"{key_prefix}_input")
-        return parse_google_id(value)
-    return options.get(select, "")
+    mode_key = f"{key_prefix}_mode"
+    mode = st.session_state.get(mode_key, "select")
+
+    if mode == "select":
+        choice_label = "Add new..."
+        select = st.selectbox(
+            label,
+            options=list(options.keys()) + [choice_label],
+            key=f"{key_prefix}_select",
+        )
+        if select == choice_label:
+            st.session_state[mode_key] = "input"
+            return ""
+        return options.get(select, "")
+
+    value = st.text_input(label, key=f"{key_prefix}_input")
+    if st.button("Cancel", key=f"{key_prefix}_cancel"):
+        st.session_state[mode_key] = "select"
+        return ""
+    return parse_google_id(value)
 
 def get_google_service(service_account_info):
     """Create authorized Google Sheets and Drive clients.
