@@ -3,6 +3,7 @@ import sys
 import types
 import builtins
 import io
+import pytest
 
 # Stub external dependencies not installed during tests
 googleapiclient_errors = types.ModuleType('googleapiclient.errors')
@@ -114,3 +115,31 @@ def test_run_tagger_outputs_basic_columns(monkeypatch):
         'prod',
         'ang',
     ]
+
+
+def test_run_tagger_parses_ids(monkeypatch):
+    calls = {}
+
+    def fake_write(sheet_id, rows):
+        calls['sheet'] = sheet_id
+
+    def fake_list(folder_id):
+        calls['folder'] = folder_id
+        return []
+
+    monkeypatch.setattr(main_tagger, 'write_to_sheet', fake_write)
+    monkeypatch.setattr(main_tagger, 'list_images', fake_list)
+    monkeypatch.setattr(main_tagger, 'analyze_image', lambda fid: ([], []))
+    monkeypatch.setattr(main_tagger, 'chat_classify', lambda *a, **k: {})
+
+    sheet_url = 'https://docs.google.com/spreadsheets/d/SHEETID/edit'
+    folder_url = 'https://drive.google.com/drive/folders/FOLDERID'
+    main_tagger.run_tagger(sheet_url, folder_url)
+
+    assert calls['sheet'] == 'SHEETID'
+    assert calls['folder'] == 'FOLDERID'
+
+
+def test_run_tagger_invalid_id(monkeypatch):
+    with pytest.raises(ValueError):
+        main_tagger.run_tagger('', '')

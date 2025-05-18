@@ -1,6 +1,7 @@
 import importlib
 import sys
 import types
+import pytest
 
 # Stub external dependencies not installed during tests
 googleapiclient_errors = types.ModuleType('googleapiclient.errors')
@@ -231,3 +232,75 @@ def test_read_sheet_handles_mismatched_rows(monkeypatch):
 
     assert df.columns == ["A", "B", "C"]
     assert df.data == [["1", "2", ""], ["3", "4", "5"]]
+
+
+def test_generate_recipes_parses_ids(monkeypatch):
+    captured = {}
+
+    class FakeDF:
+        def to_dict(self, orient='records'):
+            return []
+
+    def fake_read_sheet(service, sid, sheet_name):
+        captured.setdefault('sids', []).append(sid)
+        return FakeDF()
+
+    def fake_get_brand_profile(df, code):
+        return {}
+
+    def fake_choose_recipe_components(*a, **k):
+        return {}, {}
+
+    def fake_choose_assets(*a, **k):
+        return [], False
+
+    def fake_get_asset_link(service, file_name, folder_id):
+        captured['folder'] = folder_id
+        return 'link'
+
+    def fake_generate_recipe_copy(*a, **k):
+        return ''
+
+    class FakeExec:
+        def execute(self):
+            return {}
+
+    class FakeSheets:
+        def values(self):
+            return types.SimpleNamespace(update=lambda **k: FakeExec())
+
+        def get(self, spreadsheetId):
+            return types.SimpleNamespace(execute=lambda: {'sheets': []})
+
+        def batchUpdate(self, **k):
+            return FakeExec()
+
+    class FakeService:
+        def spreadsheets(self):
+            return FakeSheets()
+
+    def fake_get_google_service(info):
+        return FakeService(), object()
+
+    monkeypatch.setattr(recipe_generator, 'read_sheet', fake_read_sheet)
+    monkeypatch.setattr(recipe_generator, 'get_brand_profile', fake_get_brand_profile)
+    monkeypatch.setattr(recipe_generator, 'choose_recipe_components', fake_choose_recipe_components)
+    monkeypatch.setattr(recipe_generator, 'choose_assets', fake_choose_assets)
+    monkeypatch.setattr(recipe_generator, 'get_asset_link', fake_get_asset_link)
+    monkeypatch.setattr(recipe_generator, 'generate_recipe_copy', fake_generate_recipe_copy)
+    monkeypatch.setattr(recipe_generator, 'get_google_service', fake_get_google_service)
+
+    sheet_url = 'https://docs.google.com/spreadsheets/d/SHEETID/edit'
+    folder_url = 'https://drive.google.com/drive/folders/FOLDERID'
+    brand_url = 'https://docs.google.com/spreadsheets/d/BRANDID/edit'
+
+    recipe_generator.generate_recipes(sheet_url, {}, folder_url, 'BR', brand_url, num_recipes=1)
+
+    assert 'SHEETID' in captured['sids']
+    assert 'BRANDID' in captured['sids']
+    assert captured['folder'] == 'FOLDERID'
+
+
+def test_generate_recipes_invalid_id(monkeypatch):
+    with pytest.raises(ValueError):
+        recipe_generator.generate_recipes('', {}, '', 'BR', '', num_recipes=1)

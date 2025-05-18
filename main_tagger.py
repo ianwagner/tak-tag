@@ -8,6 +8,7 @@ from googleapiclient.http import MediaIoBaseDownload
 from googleapiclient.errors import HttpError
 from google.cloud import vision
 from chat_classifier import chat_classify
+from utils import parse_google_id
 
 SCOPES = [
     'https://www.googleapis.com/auth/drive.readonly',
@@ -123,6 +124,10 @@ def run_tagger(sheet_id, folder_id, expected_content=None):
         Additional content tags to classify. Defaults to ``[]`` if not provided.
     """
 
+    sheet_id = parse_google_id(sheet_id)
+    folder_id = parse_google_id(folder_id)
+    if not sheet_id or not folder_id:
+        raise ValueError("Invalid Google ID")
     expected_content = expected_content or []
 
     rows = [[
@@ -172,8 +177,14 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Tag images in a Drive folder and write results to a Google Sheet"
     )
-    parser.add_argument("sheet_id", help="Destination Google Sheet ID")
-    parser.add_argument("folder_id", help="Source Google Drive folder ID")
+    parser.add_argument(
+        "sheet_id",
+        help="Destination Google Sheet ID or full URL",
+    )
+    parser.add_argument(
+        "folder_id",
+        help="Source Google Drive folder ID or full URL",
+    )
     parser.add_argument(
         "-e",
         "--expected-content",

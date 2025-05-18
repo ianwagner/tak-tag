@@ -61,7 +61,7 @@ history.
 
 ### CLI Example
 
-You can call the utility functions from the command line. For example, to tag images:
+You can call the utility functions from the command line. Both raw IDs and full Google URLs are accepted. For example, to tag images:
 
 ```bash
 python - <<'PY'
