@@ -17,6 +17,36 @@ app_password = secrets["app_password"]
 SERVICE_ACCOUNT_INFO = json.loads(secrets["google"]["service_account"])
 HISTORY = load_history()
 
+
+def history_input(label, options, key_prefix):
+    """Return an ID from saved options or new entry using a single selector.
+
+    Parameters
+    ----------
+    label : str
+        Label for the input field.
+    options : dict[str, str]
+        Mapping of display names to IDs.
+    key_prefix : str
+        Unique key prefix for Streamlit widgets.
+
+    Returns
+    -------
+    str
+        The selected or entered ID string.
+    """
+
+    choice_label = "Enter new..."
+    select = st.selectbox(
+        label,
+        options=list(options.keys()) + [choice_label],
+        key=f"{key_prefix}_select",
+    )
+    if select == choice_label:
+        value = st.text_input(label, key=f"{key_prefix}_input")
+        return parse_google_id(value)
+    return options.get(select, "")
+
 def get_google_service(service_account_info):
     """Create authorized Google Sheets and Drive clients.
 
@@ -70,21 +100,15 @@ with tab1:
     sheet_options = {e['name']: e['id'] for e in HISTORY.get('sheets', [])}
     folder_options = {e['name']: e['id'] for e in HISTORY.get('folders', [])}
 
-    selected_sheet = st.selectbox(
-        "Saved Sheets",
-        options=[""] + list(sheet_options.keys()),
-        key="tag_saved_sheet",
+    tag_sheet_id = history_input(
+        "Google Sheet URL or ID (for tagged assets)",
+        sheet_options,
+        "tag_sheet",
     )
-    sheet_input = st.text_input(
-        "Google Sheet URL or ID (for tagged assets)", key="tag_sheet"
-    )
-    selected_folder = st.selectbox(
-        "Saved Folders",
-        options=[""] + list(folder_options.keys()),
-        key="tag_saved_folder",
-    )
-    folder_input = st.text_input(
-        "Google Drive Folder URL or ID (image folder)", key="tag_folder"
+    tag_folder_id = history_input(
+        "Google Drive Folder URL or ID (image folder)",
+        folder_options,
+        "tag_folder",
     )
 
     st.subheader("Expected Content")
@@ -93,8 +117,8 @@ with tab1:
     if st.button("Run Tagging"):
         try:
             st.info("Tagging images...")
-            final_sheet = sheet_options.get(selected_sheet) or parse_google_id(sheet_input)
-            final_folder = folder_options.get(selected_folder) or parse_google_id(folder_input)
+            final_sheet = tag_sheet_id
+            final_folder = tag_folder_id
             run_tagger(final_sheet, final_folder, expected_content)
 
             sheets_service, drive_service = get_google_service(SERVICE_ACCOUNT_INFO)
@@ -117,21 +141,15 @@ with tab2:
     st.title("📋 Generate Creative Recipes")
     col_main, = st.columns([1])
     with col_main:
-        recipe_sheet_select = st.selectbox(
-            "Saved Sheets",
-            options=[""] + list(sheet_options.keys()),
-            key="recipe_saved_sheet",
+        recipe_sheet_id = history_input(
+            "Tagged Asset Sheet URL or ID",
+            sheet_options,
+            "recipe_sheet",
         )
-        recipe_sheet_id_input = st.text_input(
-            "Tagged Asset Sheet URL or ID", key="recipe_sheet"
-        )
-        image_folder_select = st.selectbox(
-            "Saved Folders",
-            options=[""] + list(folder_options.keys()),
-            key="recipe_saved_folder",
-        )
-        image_folder_id_input = st.text_input(
-            "Google Drive Folder URL or ID (for image links)", key="asset_folder"
+        image_folder_id = history_input(
+            "Google Drive Folder URL or ID (for image links)",
+            folder_options,
+            "asset_folder",
         )
         brand_code = st.text_input("Brand Code (matches brand list)", key="brand_code")
 
@@ -154,8 +172,8 @@ with tab2:
         if st.button("Generate Recipes"):
             try:
                 st.info("Generating recipes...")
-                final_sheet = sheet_options.get(recipe_sheet_select) or parse_google_id(recipe_sheet_id_input)
-                final_folder = folder_options.get(image_folder_select) or parse_google_id(image_folder_id_input)
+                final_sheet = recipe_sheet_id
+                final_folder = image_folder_id
                 recipes = generate_recipes(
                     final_sheet,
                     SERVICE_ACCOUNT_INFO,
