@@ -3,3 +3,4 @@ secrets.toml
 __pycache__/
 *.pyc
 .DS_Store
+.tak_history.json

@@ -8,6 +8,7 @@ from googleapiclient.http import MediaIoBaseDownload
 from googleapiclient.errors import HttpError
 from google.cloud import vision
 from chat_classifier import chat_classify
+from utils import parse_google_id
 
 SCOPES = [
     'https://www.googleapis.com/auth/drive.readonly',
@@ -41,6 +42,9 @@ def list_images(folder_id):
     list[dict]
         File metadata dictionaries with ``id``, ``name`` and ``webViewLink``.
     """
+
+    if not folder_id:
+        raise ValueError("folder_id is required")
 
     query = f"'{folder_id}' in parents and mimeType contains 'image/'"
     response = drive_service.files().list(q=query, fields="files(id, name, webViewLink)").execute()
@@ -122,6 +126,11 @@ def run_tagger(sheet_id, folder_id, expected_content=None):
     expected_content : list[str] | None, optional
         Additional content tags to classify. Defaults to ``[]`` if not provided.
     """
+
+    sheet_id = parse_google_id(sheet_id)
+    folder_id = parse_google_id(folder_id)
+    if not sheet_id or not folder_id:
+        raise ValueError("Invalid Google ID")
 
     expected_content = expected_content or []
 

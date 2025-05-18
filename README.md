@@ -11,6 +11,12 @@ TAK Tag provides utilities for tagging image assets and generating ad recipes us
 pip install -r requirements.txt
 ```
 
+After installing the requirements you can run the test suite:
+
+```bash
+python -m pytest -q
+```
+
 ## Required Environment Variables
 
 - `OPENAI_API_KEY` – API key for accessing OpenAI models.
@@ -47,6 +53,18 @@ Run the interactive tagging and recipe builder UI:
 streamlit run tagger_app.py
 ```
 
+You can paste entire Google Sheet or Drive URLs into the form fields. The
+Streamlit app writes previously used sheet and folder names to
+`.tak_history.json` located in the project root and provides them in dropdown
+menus for quick reuse. Edit or delete this file if you need to clear your
+
+history.
+
+If two sheets or folders share the same name, separate records are kept for
+each ID. In the dropdown these entries appear as the name followed by the
+first few characters of the ID, letting you pick the correct one when titles
+match.
+
 ### CLI Example
 
 You can call the utility functions from the command line. For example, to tag images:
@@ -58,7 +76,7 @@ run_tagger('SHEET_ID', 'FOLDER_ID', ['shoes', 'accessories'])
 PY
 ```
 
-This writes tag results to the provided Google Sheet. Recipes can be generated in a similar manner using `generate_recipes` from `recipe_generator.py`.
+Both raw IDs and full Google URLs work for the sheet and folder arguments. This writes tag results to the provided Google Sheet. Recipes can be generated in a similar manner using `generate_recipes` from `recipe_generator.py`.
 
 ## Customizing the Streamlit Theme
 

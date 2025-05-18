@@ -70,13 +70,20 @@ builtins.open = _open
 
 
 def test_run_tagger_outputs_basic_columns(monkeypatch):
+    sheet_url = 'https://docs.google.com/spreadsheets/d/SHEET123/edit'
+    folder_url = 'https://drive.google.com/drive/folders/FOLDER456'
     captured = {}
 
     def fake_write(sheet_id, rows):
+        captured['sheet_id'] = sheet_id
         captured['rows'] = rows
 
+    def fake_list_images(fid):
+        captured['folder_id'] = fid
+        return [{'id': '1', 'name': 'img', 'webViewLink': 'link'}]
+
     monkeypatch.setattr(main_tagger, 'write_to_sheet', fake_write)
-    monkeypatch.setattr(main_tagger, 'list_images', lambda fid: [{'id': '1', 'name': 'img', 'webViewLink': 'link'}])
+    monkeypatch.setattr(main_tagger, 'list_images', fake_list_images)
     monkeypatch.setattr(main_tagger, 'analyze_image', lambda fid: (['label'], ['web']))
     monkeypatch.setattr(
         main_tagger,
@@ -90,8 +97,10 @@ def test_run_tagger_outputs_basic_columns(monkeypatch):
         },
     )
 
-    main_tagger.run_tagger('sid', 'fid', ['x'])
+    main_tagger.run_tagger(sheet_url, folder_url, ['x'])
 
+    assert captured['sheet_id'] == 'SHEET123'
+    assert captured['folder_id'] == 'FOLDER456'
     assert captured['rows'][0] == [
         'Image Name',
         'Image Link',
@@ -114,3 +123,27 @@ def test_run_tagger_outputs_basic_columns(monkeypatch):
         'prod',
         'ang',
     ]
+
+
+def test_run_tagger_empty_folder_id_errors_before_api(monkeypatch):
+    called = {}
+
+    class FakeFiles:
+        def list(self, **kwargs):
+            called['called'] = True
+            return types.SimpleNamespace(execute=lambda: {})
+
+    class FakeDrive:
+        def files(self):
+            return FakeFiles()
+
+    monkeypatch.setattr(main_tagger, 'drive_service', FakeDrive())
+
+    try:
+        main_tagger.run_tagger('sid', '', [])
+    except ValueError as e:
+        assert 'folder' in str(e).lower()
+    else:
+        raise AssertionError('ValueError not raised')
+
+    assert 'called' not in called

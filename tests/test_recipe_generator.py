@@ -96,6 +96,10 @@ def test_generate_recipes_filters_layouts_and_copy(monkeypatch):
     selected_layout = 'Layout B'
     selected_copy = 'Copy Y'
 
+    sheet_url = 'https://docs.google.com/spreadsheets/d/SHEET123/edit'
+    folder_url = 'https://drive.google.com/drive/folders/FOLDER456'
+    brand_sheet_url = 'https://docs.google.com/spreadsheets/d/BRAND789/edit'
+
     layouts_rows = [
         {'Name': 'Layout A', 'Use Case': 'A', 'Asset Count': '1'},
         {'Name': 'Layout B', 'Use Case': 'B', 'Asset Count': '1'},
@@ -128,7 +132,10 @@ def test_generate_recipes_filters_layouts_and_copy(monkeypatch):
             assert orient == 'records'
             return self.rows
 
+    captured = {}
+
     def fake_read_sheet(service, sid, sheet_name):
+        captured.setdefault('sheet_ids', set()).add(sid)
         if sheet_name == 'layouts':
             return FakeDF(layouts_rows)
         if sheet_name == 'copy_formats':
@@ -150,6 +157,7 @@ def test_generate_recipes_filters_layouts_and_copy(monkeypatch):
         return [asset_rows[0]], False
 
     def fake_get_asset_link(service, file_name, folder_id):
+        captured['folder_id'] = folder_id
         return 'link'
 
     def fake_generate_recipe_copy(*args, **kwargs):
@@ -189,12 +197,15 @@ def test_generate_recipes_filters_layouts_and_copy(monkeypatch):
     monkeypatch.setattr(recipe_generator, 'get_google_service', fake_get_google_service)
 
     output = recipe_generator.generate_recipes(
-        'sid', {}, 'folder', 'BR', 'brand_sid', num_recipes=1,
+        sheet_url, {}, folder_url, 'BR', brand_sheet_url, num_recipes=1,
         selected_layouts=[selected_layout], selected_copy_formats=[selected_copy]
     )
 
     assert output[1][1] == selected_layout
     assert output[1][2] == selected_copy
+    assert 'SHEET123' in captured['sheet_ids']
+    assert 'BRAND789' in captured['sheet_ids']
+    assert captured['folder_id'] == 'FOLDER456'
 
 
 def test_read_sheet_handles_mismatched_rows(monkeypatch):
