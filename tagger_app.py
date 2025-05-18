@@ -141,11 +141,6 @@ with tab2:
     st.title("📋 Generate Creative Recipes")
     col_main, = st.columns([1])
     with col_main:
-        recipe_sheet_id = history_input(
-            "Tagged Asset Sheet URL or ID",
-            sheet_options,
-            "recipe_sheet",
-        )
         image_folder_id = history_input(
             "Google Drive Folder URL or ID (for image links)",
             folder_options,
@@ -172,7 +167,7 @@ with tab2:
         if st.button("Generate Recipes"):
             try:
                 st.info("Generating recipes...")
-                final_sheet = recipe_sheet_id
+                final_sheet = tag_sheet_id
                 final_folder = image_folder_id
                 recipes = generate_recipes(
                     final_sheet,
