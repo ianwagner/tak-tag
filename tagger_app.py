@@ -25,8 +25,8 @@ def history_input(label, options, key_prefix):
     ----------
     label : str
         Label for the input field.
-    options : dict[str, str]
-        Mapping of display names to IDs.
+    options : list[dict]
+        Saved entries with ``name`` and ``id`` keys.
     key_prefix : str
         Unique key prefix for Streamlit widgets.
 
@@ -40,16 +40,18 @@ def history_input(label, options, key_prefix):
     mode = st.session_state.get(mode_key, "select")
 
     if mode == "select":
-        choice_label = "Add new..."
+        indices = list(range(len(options)))
+        choice_value = -1
         select = st.selectbox(
             label,
-            options=list(options.keys()) + [choice_label],
+            options=indices + [choice_value],
+            format_func=lambda i: options[i]["name"] if i != choice_value else "Add new...",
             key=f"{key_prefix}_select",
         )
-        if select == choice_label:
+        if select == choice_value:
             st.session_state[mode_key] = "input"
             return ""
-        return options.get(select, "")
+        return options[select]["id"]
 
     value = st.text_input(label, key=f"{key_prefix}_input")
     if value:
@@ -107,8 +109,8 @@ if password != app_password:
 tab1, tab2, tab_brand = st.tabs(["🧠 Tag Assets", "📋 Generate Recipes", "🏷 Manage Brands"])
 with tab1:
     st.title("🧠 Tag Image Assets")
-    sheet_options = {e['name']: e['id'] for e in HISTORY.get('sheets', [])}
-    folder_options = {e['name']: e['id'] for e in HISTORY.get('folders', [])}
+    sheet_options = HISTORY.get('sheets', [])
+    folder_options = HISTORY.get('folders', [])
 
     sheet_id = history_input(
         "Google Sheet URL or ID (for tagged assets)",
