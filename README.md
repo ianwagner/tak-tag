@@ -11,6 +11,12 @@ TAK Tag provides utilities for tagging image assets and generating ad recipes us
 pip install -r requirements.txt
 ```
 
+After installing the requirements you can run the test suite:
+
+```bash
+python -m pytest -q
+```
+
 ## Required Environment Variables
 
 - `OPENAI_API_KEY` – API key for accessing OpenAI models.
