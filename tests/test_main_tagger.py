@@ -3,6 +3,7 @@ import sys
 import types
 import builtins
 import io
+import pytest
 
 # Stub external dependencies not installed during tests
 googleapiclient_errors = types.ModuleType('googleapiclient.errors')
@@ -114,3 +115,8 @@ def test_run_tagger_outputs_basic_columns(monkeypatch):
         'prod',
         'ang',
     ]
+
+
+def test_list_images_empty_folder():
+    with pytest.raises(ValueError, match="Missing folder ID"):
+        main_tagger.list_images("")

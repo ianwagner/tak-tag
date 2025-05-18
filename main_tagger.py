@@ -42,6 +42,9 @@ def list_images(folder_id):
         File metadata dictionaries with ``id``, ``name`` and ``webViewLink``.
     """
 
+    if not folder_id:
+        raise ValueError("Missing folder ID")
+
     query = f"'{folder_id}' in parents and mimeType contains 'image/'"
     response = drive_service.files().list(q=query, fields="files(id, name, webViewLink)").execute()
     return response.get('files', [])
