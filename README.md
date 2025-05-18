@@ -47,6 +47,10 @@ Run the interactive tagging and recipe builder UI:
 streamlit run tagger_app.py
 ```
 
+Each Sheet and Folder field lets you pick from previously used items or choose
+"Add new..." to paste a full Google URL or ID. The selections are stored in
+`.tak_history.json` for quick reuse.
+
 ### CLI Example
 
 You can call the utility functions from the command line. For example, to tag images:
