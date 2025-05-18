@@ -70,8 +70,8 @@ builtins.open = _open
 
 
 def test_run_tagger_outputs_basic_columns(monkeypatch):
-    sheet_url = 'https://docs.google.com/spreadsheets/d/SHEET123/edit'
-    folder_url = 'https://drive.google.com/drive/folders/FOLDER456'
+    sheet_id = 'SHEET123'
+    folder_id = 'FOLDER456'
     captured = {}
 
     def fake_write(sheet_id, rows):
@@ -97,7 +97,7 @@ def test_run_tagger_outputs_basic_columns(monkeypatch):
         },
     )
 
-    main_tagger.run_tagger(sheet_url, folder_url, ['x'])
+    main_tagger.run_tagger(sheet_id, folder_id, ['x'])
 
     assert captured['sheet_id'] == 'SHEET123'
     assert captured['folder_id'] == 'FOLDER456'

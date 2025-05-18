@@ -6,7 +6,6 @@ import logging
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
-from utils import parse_google_id
 # Configure basic logging
 logger = logging.getLogger(__name__)
 if not logger.hasHandlers():
@@ -126,11 +125,8 @@ def generate_recipes(
     selected_layouts=None,
     selected_copy_formats=None,
 ):
-    sheet_id = parse_google_id(sheet_id)
-    folder_id = parse_google_id(folder_id)
-    brand_sheet_id = parse_google_id(brand_sheet_id)
     if not sheet_id or not folder_id or not brand_sheet_id:
-        raise ValueError("Invalid Google ID")
+        raise ValueError("sheet_id, folder_id, and brand_sheet_id are required")
 
     sheets_service, drive_service = get_google_service(service_account_info)
     # Load all relevant sheets
