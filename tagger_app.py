@@ -7,7 +7,6 @@ from main_tagger import run_tagger
 from recipe_generator import generate_recipes, read_sheet, LAYOUT_COPY_SHEET_ID
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
-from utils import parse_google_id, load_history, save_history, build_history_options
 
 # Load app secrets
 with open("secrets.toml", "r") as f:
@@ -15,47 +14,8 @@ with open("secrets.toml", "r") as f:
 
 app_password = secrets["app_password"]
 SERVICE_ACCOUNT_INFO = json.loads(secrets["google"]["service_account"])
-HISTORY = load_history()
 
 
-def history_input(label, options, key_prefix):
-    """Return an ID from saved options or new entry using a single widget.
-
-    Parameters
-    ----------
-    label : str
-        Label for the input field.
-    options : dict[str, str]
-        Mapping of display names to IDs.
-    key_prefix : str
-        Unique key prefix for Streamlit widgets.
-
-    Returns
-    -------
-    str
-        The selected or entered ID string.
-    """
-
-    mode_key = f"{key_prefix}_mode"
-    mode = st.session_state.get(mode_key, "select")
-
-    if mode == "select":
-        choice_label = "Add new..."
-        select = st.selectbox(
-            label,
-            options=list(options.keys()) + [choice_label],
-            key=f"{key_prefix}_select",
-        )
-        if select == choice_label:
-            st.session_state[mode_key] = "input"
-            return ""
-        return options.get(select, "")
-
-    value = st.text_input(label, key=f"{key_prefix}_input")
-    if value:
-        st.session_state[mode_key] = "select"
-        return parse_google_id(value)
-    return ""
 
 def get_google_service(service_account_info):
     """Create authorized Google Sheets and Drive clients.
@@ -107,18 +67,13 @@ if password != app_password:
 tab1, tab2, tab_brand = st.tabs(["🧠 Tag Assets", "📋 Generate Recipes", "🏷 Manage Brands"])
 with tab1:
     st.title("🧠 Tag Image Assets")
-    sheet_options = build_history_options(HISTORY.get('sheets', []))
-    folder_options = build_history_options(HISTORY.get('folders', []))
-
-    sheet_id = history_input(
-        "Google Sheet URL or ID (for tagged assets)",
-        sheet_options,
-        "tag_sheet",
+    sheet_id = st.text_input(
+        "Google Sheet ID (for tagged assets)",
+        key="tag_sheet_id",
     )
-    folder_id = history_input(
-        "Google Drive Folder URL or ID (image folder)",
-        folder_options,
-        "tag_folder",
+    folder_id = st.text_input(
+        "Google Drive Folder ID (image folder)",
+        key="tag_folder_id",
     )
 
     st.subheader("Expected Content")
@@ -131,20 +86,6 @@ with tab1:
             final_folder = folder_id
             run_tagger(final_sheet, final_folder, expected_content)
 
-            sheets_service, drive_service = get_google_service(SERVICE_ACCOUNT_INFO)
-            if not any(e['id'] == final_sheet for e in HISTORY.get('sheets', [])):
-                HISTORY.setdefault('sheets', []).append({
-                    'id': final_sheet,
-                    'name': get_file_name(drive_service, final_sheet)
-                })
-            if not any(e['id'] == final_folder for e in HISTORY.get('folders', [])):
-                HISTORY.setdefault('folders', []).append({
-                    'id': final_folder,
-                    'name': get_file_name(drive_service, final_folder)
-                })
-            save_history(HISTORY)
-            st.session_state["tag_sheet_mode"] = "select"
-            st.session_state["tag_folder_mode"] = "select"
             st.success("✅ Tagging complete. Check your Google Sheet.")
         except Exception as e:
             st.error(f"❌ Error: {e}")
@@ -153,15 +94,13 @@ with tab2:
     st.title("📋 Generate Creative Recipes")
     col_main, = st.columns([1])
     with col_main:
-        sheet_id = history_input(
-            "Google Sheet URL or ID (for tagged assets)",
-            sheet_options,
-            "recipe_sheet",
+        sheet_id = st.text_input(
+            "Google Sheet ID (for tagged assets)",
+            key="recipe_sheet_id",
         )
-        folder_id = history_input(
-            "Google Drive Folder URL or ID (for image links)",
-            folder_options,
-            "recipe_folder",
+        folder_id = st.text_input(
+            "Google Drive Folder ID (for image links)",
+            key="recipe_folder_id",
         )
         brand_code = st.text_input("Brand Code (matches brand list)", key="brand_code")
 
@@ -199,20 +138,6 @@ with tab2:
                     selected_layouts=selected_layouts,
                     selected_copy_formats=selected_copy_formats,
                 )
-                sheets_service, drive_service = get_google_service(SERVICE_ACCOUNT_INFO)
-                if not any(e['id'] == final_sheet for e in HISTORY.get('sheets', [])):
-                    HISTORY.setdefault('sheets', []).append({
-                        'id': final_sheet,
-                        'name': get_file_name(drive_service, final_sheet)
-                    })
-                if not any(e['id'] == final_folder for e in HISTORY.get('folders', [])):
-                    HISTORY.setdefault('folders', []).append({
-                        'id': final_folder,
-                        'name': get_file_name(drive_service, final_folder)
-                    })
-                save_history(HISTORY)
-                st.session_state["recipe_sheet_mode"] = "select"
-                st.session_state["recipe_folder_mode"] = "select"
                 st.success("✅ Recipes generated. Check your Google Sheet.")
             except Exception as e:
                 st.error(f"❌ Error: {e}")

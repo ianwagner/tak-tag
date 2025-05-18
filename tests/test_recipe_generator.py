@@ -96,9 +96,9 @@ def test_generate_recipes_filters_layouts_and_copy(monkeypatch):
     selected_layout = 'Layout B'
     selected_copy = 'Copy Y'
 
-    sheet_url = 'https://docs.google.com/spreadsheets/d/SHEET123/edit'
-    folder_url = 'https://drive.google.com/drive/folders/FOLDER456'
-    brand_sheet_url = 'https://docs.google.com/spreadsheets/d/BRAND789/edit'
+    sheet_id = 'SHEET123'
+    folder_id = 'FOLDER456'
+    brand_sheet_id = 'BRAND789'
 
     layouts_rows = [
         {'Name': 'Layout A', 'Use Case': 'A', 'Asset Count': '1'},
@@ -197,7 +197,7 @@ def test_generate_recipes_filters_layouts_and_copy(monkeypatch):
     monkeypatch.setattr(recipe_generator, 'get_google_service', fake_get_google_service)
 
     output = recipe_generator.generate_recipes(
-        sheet_url, {}, folder_url, 'BR', brand_sheet_url, num_recipes=1,
+        sheet_id, {}, folder_id, 'BR', brand_sheet_id, num_recipes=1,
         selected_layouts=[selected_layout], selected_copy_formats=[selected_copy]
     )
 
