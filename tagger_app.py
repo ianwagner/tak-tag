@@ -52,10 +52,10 @@ def history_input(label, options, key_prefix):
         return options.get(select, "")
 
     value = st.text_input(label, key=f"{key_prefix}_input")
-    if st.button("Cancel", key=f"{key_prefix}_cancel"):
+    if value:
         st.session_state[mode_key] = "select"
-        return ""
-    return parse_google_id(value)
+        return parse_google_id(value)
+    return ""
 
 def get_google_service(service_account_info):
     """Create authorized Google Sheets and Drive clients.
