@@ -70,7 +70,7 @@ run_tagger('SHEET_ID', 'FOLDER_ID', ['shoes', 'accessories'])
 PY
 ```
 
-This writes tag results to the provided Google Sheet. Recipes can be generated in a similar manner using `generate_recipes` from `recipe_generator.py`.
+Both raw IDs and full Google URLs work for the sheet and folder arguments. This writes tag results to the provided Google Sheet. Recipes can be generated in a similar manner using `generate_recipes` from `recipe_generator.py`.
 
 ## Customizing the Streamlit Theme
 
