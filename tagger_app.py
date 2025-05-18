@@ -37,14 +37,21 @@ def history_input(label, options, key_prefix):
     """
 
     mode_key = f"{key_prefix}_mode"
+    select_key = f"{key_prefix}_select"
     mode = st.session_state.get(mode_key, "select")
 
     if mode == "select":
         choice_label = "Add new..."
+        option_labels = list(options.keys())
+        current = st.session_state.get(select_key, "")
+        if current and current not in option_labels:
+            option_labels.insert(0, current)
+            options.setdefault(current, current)
+        option_labels.append(choice_label)
         select = st.selectbox(
             label,
-            options=list(options.keys()) + [choice_label],
-            key=f"{key_prefix}_select",
+            options=option_labels,
+            key=select_key,
         )
         if select == choice_label:
             st.session_state[mode_key] = "input"
@@ -53,8 +60,11 @@ def history_input(label, options, key_prefix):
 
     value = st.text_input(label, key=f"{key_prefix}_input")
     if value:
+        parsed = parse_google_id(value)
+        st.session_state[select_key] = parsed
         st.session_state[mode_key] = "select"
-        return parse_google_id(value)
+        options.setdefault(parsed, parsed)
+        return parsed
     return ""
 
 def get_google_service(service_account_info):
@@ -143,6 +153,8 @@ with tab1:
                     'name': get_file_name(drive_service, final_folder)
                 })
             save_history(HISTORY)
+            st.session_state["tag_sheet_select"] = final_sheet
+            st.session_state["tag_folder_select"] = final_folder
             st.session_state["tag_sheet_mode"] = "select"
             st.session_state["tag_folder_mode"] = "select"
             st.success("✅ Tagging complete. Check your Google Sheet.")
@@ -211,6 +223,8 @@ with tab2:
                         'name': get_file_name(drive_service, final_folder)
                     })
                 save_history(HISTORY)
+                st.session_state["recipe_sheet_select"] = final_sheet
+                st.session_state["recipe_folder_select"] = final_folder
                 st.session_state["recipe_sheet_mode"] = "select"
                 st.session_state["recipe_folder_mode"] = "select"
                 st.success("✅ Recipes generated. Check your Google Sheet.")
