@@ -57,7 +57,13 @@ You can paste entire Google Sheet or Drive URLs into the form fields. The
 Streamlit app writes previously used sheet and folder names to
 `.tak_history.json` located in the project root and provides them in dropdown
 menus for quick reuse. Edit or delete this file if you need to clear your
+
 history.
+
+If two sheets or folders share the same name, separate records are kept for
+each ID. In the dropdown these entries appear as the name followed by the
+first few characters of the ID, letting you pick the correct one when titles
+match.
 
 ### CLI Example
 
