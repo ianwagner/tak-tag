@@ -1,6 +1,7 @@
-import openai
 import os
 import random
+import httpx
+import time
 import pandas as pd
 import logging
 from google.oauth2 import service_account
@@ -17,6 +18,7 @@ SCOPES = [
 ]
 # Layout and copy sheet
 LAYOUT_COPY_SHEET_ID = "1M_-6UqmSE8yAlaSQl3EoGRZfdkzklb0Qpy2wwJmYq8E"
+API_URL = "https://api.openai.com/v1/chat/completions"
 """Utilities for generating ad recipes from tagged assets.
 
 This module assumes the tagged assets sheet includes the legacy
@@ -72,6 +74,39 @@ def choose_recipe_components(layouts_df, copy_df):
 def get_brand_profile(brand_df, brand_code):
     profile = brand_df[brand_df['Brand Code'] == brand_code]
     return profile.iloc[0].to_dict() if not profile.empty else {}
+def _call_openai(prompt: str, *, model: str = "gpt-4-turbo", temperature: float = 0.7, max_retries: int = 3, backoff: float = 1.5) -> str:
+    """Return completion text from the OpenAI chat endpoint with retries."""
+
+    api_key = os.getenv("OPENAI_API_KEY", "")
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+    }
+    payload = {
+        "model": model,
+        "messages": [
+            {"role": "system", "content": "You are a brilliant ad copywriter."},
+            {"role": "user", "content": prompt.strip()},
+        ],
+        "temperature": temperature,
+    }
+
+    attempt = 0
+    while True:
+        try:
+            with httpx.Client(http2=False, timeout=30) as client:
+                resp = client.post(API_URL, headers=headers, json=payload)
+            resp.raise_for_status()
+            data = resp.json()
+            return data["choices"][0]["message"]["content"]
+        except httpx.HTTPError as e:
+            if attempt < max_retries:
+                time.sleep(backoff * (2 ** attempt))
+                attempt += 1
+                continue
+            raise
+
+
 def generate_recipe_copy(asset, layout, copy_format, brand, *, audience=None, angle=None, offer=None):
     style = copy_format.get("Prompt Style", "").strip()
     if not style:
@@ -98,17 +133,9 @@ You're an expert Meta ad copywriter. Generate copy that matches the following st
 Return only the finished ad copy.
 """
     logger.debug("=== PROMPT SENT TO GPT ===\n%s", prompt)
-    client = openai.OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
     try:
-        response = client.chat.completions.create(
-            model="gpt-4-turbo",
-            messages=[
-                {"role": "system", "content": "You are a brilliant ad copywriter."},
-                {"role": "user", "content": prompt.strip()}
-            ],
-            temperature=0.7,
-        )
-        return response.choices[0].message.content.strip().strip('"').strip("\'")
+        text = _call_openai(prompt)
+        return text.strip().strip('"').strip("'")
     except Exception as e:
         return f"ERROR: {e}"
 def generate_recipes(

@@ -7,7 +7,6 @@ googleapiclient_errors = types.ModuleType('googleapiclient.errors')
 googleapiclient_errors.HttpError = type('HttpError', (Exception,), {})
 
 stub_modules = {
-    'openai': types.ModuleType('openai'),
     'pandas': types.ModuleType('pandas'),
     'googleapiclient': types.ModuleType('googleapiclient'),
     'googleapiclient.discovery': types.ModuleType('googleapiclient.discovery'),
@@ -63,20 +62,11 @@ def test_choose_assets_insufficient_assets():
 def test_generate_recipe_copy_returns_cleaned(monkeypatch):
     response_text = '  "Great copy!"  '
 
-    class FakeCompletions:
-        def create(self, *args, **kwargs):
-            message = types.SimpleNamespace(content=response_text)
-            choice = types.SimpleNamespace(message=message)
-            return types.SimpleNamespace(choices=[choice])
+    def fake_call(prompt, *a, **k):
+        assert "Meta ad copywriter" in prompt
+        return response_text
 
-    class FakeChat:
-        completions = FakeCompletions()
-
-    class FakeOpenAI:
-        def __init__(self, api_key=None):
-            self.chat = FakeChat()
-
-    monkeypatch.setattr(recipe_generator.openai, 'OpenAI', FakeOpenAI)
+    monkeypatch.setattr(recipe_generator, '_call_openai', fake_call)
 
     asset = {
         'Matched Product': 'Widget',

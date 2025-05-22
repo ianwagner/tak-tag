@@ -4,6 +4,7 @@ import json
 import asyncio
 import itertools
 import httpx
+import time
 
 API_URL = "https://api.openai.com/v1/chat/completions"
 
@@ -25,6 +26,9 @@ def chat_classify(
     labels: list[str],
     web_labels: list[str],
     expected_content=None,
+    *,
+    max_retries: int = 3,
+    backoff: float = 1.5,
 ) -> dict:
     """Classify image tags using ChatGPT.
 
@@ -68,7 +72,7 @@ Return:
 """
 
     headers = {
-        "Authorization": f"Bearer {os.environ.get('OPENAI_API_KEY', '')}",
+        "Authorization": f"Bearer {os.getenv('OPENAI_API_KEY', '')}",
         "Content-Type": "application/json",
     }
     payload = {
@@ -84,18 +88,30 @@ Return:
         "response_format": {"type": "json_object"},
     }
 
-    try:
-        response = httpx.post(API_URL, headers=headers, json=payload, timeout=30)
-        response.raise_for_status()
-        data = response.json()
-        content = data["choices"][0]["message"]["content"]
-        result = json.loads(content)
-        result.setdefault("match_content", "unknown")
-        return result
-    except httpx.HTTPError as http_err:
-        print("ChatGPT classification HTTP error:", http_err)
-    except Exception as e:
-        print("ChatGPT classification error:", e)
+    attempt = 0
+    while True:
+        try:
+            with httpx.Client(http2=False, timeout=30) as client:
+                resp = client.post(API_URL, headers=headers, json=payload)
+            resp.raise_for_status()
+            data = resp.json()
+            content = data["choices"][0]["message"]["content"]
+            result = json.loads(content)
+            result.setdefault("match_content", "unknown")
+            return result
+        except httpx.HTTPError as http_err:
+            if attempt < max_retries:
+                time.sleep(backoff * (2 ** attempt))
+                attempt += 1
+                continue
+            print("ChatGPT classification HTTP error:", http_err)
+        except Exception as e:
+            if attempt < max_retries:
+                time.sleep(backoff * (2 ** attempt))
+                attempt += 1
+                continue
+            print("ChatGPT classification error:", e)
+        break
 
     return {
         "audience": "unknown",
@@ -167,10 +183,10 @@ Return:
     while True:
         try:
             if client is None:
-                async with httpx.AsyncClient() as c:
-                    resp = await c.post(API_URL, headers=headers, json=payload, timeout=30)
+                async with httpx.AsyncClient(http2=False, timeout=30) as c:
+                    resp = await c.post(API_URL, headers=headers, json=payload)
             else:
-                resp = await client.post(API_URL, headers=headers, json=payload, timeout=30)
+                resp = await client.post(API_URL, headers=headers, json=payload)
             resp.raise_for_status()
             data = resp.json()
             content = data["choices"][0]["message"]["content"]
@@ -184,6 +200,12 @@ Return:
                 attempt += 1
                 continue
             print("ChatGPT classification HTTP error:", http_err)
+        except httpx.HTTPError as e:
+            if attempt < max_retries:
+                await asyncio.sleep(backoff * (2 ** attempt))
+                attempt += 1
+                continue
+            print("ChatGPT classification network error:", e)
         except Exception as e:  # pragma: no cover - defensive
             if attempt < max_retries:
                 await asyncio.sleep(backoff * (2 ** attempt))
@@ -204,7 +226,7 @@ Return:
 def send_sample_message():
     """Send a sample message to GPT-4 and print the response."""
     headers = {
-        "Authorization": f"Bearer {os.environ.get('OPENAI_API_KEY', '')}",
+        "Authorization": f"Bearer {os.getenv('OPENAI_API_KEY', '')}",
         "Content-Type": "application/json",
     }
     payload = {
@@ -212,9 +234,10 @@ def send_sample_message():
         "messages": [{"role": "user", "content": "Hello"}],
     }
     try:
-        response = httpx.post(API_URL, json=payload, headers=headers, timeout=30)
-        response.raise_for_status()
-        data = response.json()
+        with httpx.Client(http2=False, timeout=30) as client:
+            resp = client.post(API_URL, json=payload, headers=headers)
+        resp.raise_for_status()
+        data = resp.json()
         print(data["choices"][0]["message"]["content"])
     except httpx.HTTPError as http_err:
         print("Sample message HTTP error:", http_err)
