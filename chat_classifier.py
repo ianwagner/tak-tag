@@ -67,10 +67,6 @@ Return:
 }}
 """
 
-    headers = {
-        "Authorization": f"Bearer {os.environ.get('OPENAI_API_KEY', '')}",
-        "Content-Type": "application/json",
-    }
     payload = {
         "model": "gpt-4",
         "messages": [
@@ -82,6 +78,11 @@ Return:
         ],
         "temperature": 0.4,
         "response_format": {"type": "json_object"},
+    }
+
+    headers = {
+        "Authorization": f"Bearer {_next_api_key()}",
+        "Content-Type": "application/json",
     }
 
     try:
@@ -146,10 +147,6 @@ Return:
 }}
 """
 
-    headers = {
-        "Authorization": f"Bearer {_next_api_key()}",
-        "Content-Type": "application/json",
-    }
     payload = {
         "model": "gpt-4",
         "messages": [
@@ -166,6 +163,10 @@ Return:
     attempt = 0
     while True:
         try:
+            headers = {
+                "Authorization": f"Bearer {_next_api_key()}",
+                "Content-Type": "application/json",
+            }
             if client is None:
                 async with httpx.AsyncClient() as c:
                     resp = await c.post(API_URL, headers=headers, json=payload, timeout=30)
