@@ -1,9 +1,9 @@
 
-import openai
 import os
 import json
+import httpx
 
-client = openai.OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+API_URL = "https://api.openai.com/v1/chat/completions"
 
 def chat_classify(
     labels: list[str],
@@ -51,30 +51,65 @@ Return:
 }}
 """
 
+    headers = {
+        "Authorization": f"Bearer {os.environ.get('OPENAI_API_KEY', '')}",
+        "Content-Type": "application/json",
+    }
+    payload = {
+        "model": "gpt-4",
+        "messages": [
+            {
+                "role": "system",
+                "content": "You are a helpful and structured tag classification assistant.",
+            },
+            {"role": "user", "content": prompt.strip()},
+        ],
+        "temperature": 0.4,
+        "response_format": {"type": "json_object"},
+    }
+
     try:
-        response = client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=[
-                {
-                    "role": "system",
-                    "content": "You are a helpful and structured tag classification assistant.",
-                },
-                {"role": "user", "content": prompt.strip()},
-            ],
-            temperature=0.4,
-            response_format={"type": "json_object"},
-        )
-        content = response.choices[0].message.content
-        data = json.loads(content)
-        # Older prompts may omit the optional match_content field
-        data.setdefault("match_content", "unknown")
-        return data
+        response = httpx.post(API_URL, headers=headers, json=payload, timeout=30)
+        response.raise_for_status()
+        data = response.json()
+        content = data["choices"][0]["message"]["content"]
+        result = json.loads(content)
+        result.setdefault("match_content", "unknown")
+        return result
+    except httpx.HTTPError as http_err:
+        print("ChatGPT classification HTTP error:", http_err)
     except Exception as e:
         print("ChatGPT classification error:", e)
-        return {
-            "audience": "unknown",
-            "product": "unknown",
-            "angle": "unknown",
-            "descriptors": [],
-            "match_content": "unknown",
-        }
+
+    return {
+        "audience": "unknown",
+        "product": "unknown",
+        "angle": "unknown",
+        "descriptors": [],
+        "match_content": "unknown",
+    }
+
+
+def send_sample_message():
+    """Send a sample message to GPT-4 and print the response."""
+    headers = {
+        "Authorization": f"Bearer {os.environ.get('OPENAI_API_KEY', '')}",
+        "Content-Type": "application/json",
+    }
+    payload = {
+        "model": "gpt-4",
+        "messages": [{"role": "user", "content": "Hello"}],
+    }
+    try:
+        response = httpx.post(API_URL, json=payload, headers=headers, timeout=30)
+        response.raise_for_status()
+        data = response.json()
+        print(data["choices"][0]["message"]["content"])
+    except httpx.HTTPError as http_err:
+        print("Sample message HTTP error:", http_err)
+    except Exception as e:
+        print("Sample message error:", e)
+
+
+if __name__ == "__main__":
+    send_sample_message()
