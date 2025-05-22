@@ -20,6 +20,7 @@ python -m pytest -q
 ## Required Environment Variables
 
 - `OPENAI_API_KEY` – API key for accessing OpenAI models.
+- `OPENAI_API_KEYS` – optional comma-separated keys enabling basic rotation when hitting rate limits.
 - `GOOGLE_SERVICE_ACCOUNT` – path to a Google service account JSON or the JSON string itself.
 
 ## `secrets.toml` Format
@@ -65,6 +66,10 @@ from main_tagger import run_tagger
 run_tagger('SHEET_ID', 'FOLDER_ID', ['shoes', 'accessories'])
 PY
 ```
+
+`run_tagger` now leverages asynchronous requests under the hood and processes
+multiple images concurrently. Use the `concurrency` parameter to adjust how many
+files are tagged at once if you encounter rate limiting.
 
 Provide the raw Google IDs for the sheet and folder arguments. This writes tag results to the provided Google Sheet. Recipes can be generated in a similar manner using `generate_recipes` from `recipe_generator.py`.
 
