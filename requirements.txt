@@ -6,5 +6,6 @@ google-auth-oauthlib
 google-cloud-vision
 openai
 httpx
+certifi
 streamlit-tags
 pytest

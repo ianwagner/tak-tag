@@ -3,7 +3,31 @@ import os
 import json
 import asyncio
 import itertools
+import logging
+import ssl
 import httpx
+
+try:
+    import certifi
+    _CA_BUNDLE = certifi.where()
+except Exception:  # pragma: no cover - optional dependency
+    certifi = None
+    _CA_BUNDLE = None
+
+logger = logging.getLogger(__name__)
+if not logger.hasHandlers():
+    logging.basicConfig(level=logging.INFO)
+
+# Remove proxy env vars to avoid TLS interception
+for _proxy_var in ("HTTP_PROXY", "http_proxy", "HTTPS_PROXY", "https_proxy"):
+    if os.environ.pop(_proxy_var, None):
+        logger.warning("Removed %s environment variable", _proxy_var)
+
+if _CA_BUNDLE:
+    logger.info("Using CA bundle at %s", _CA_BUNDLE)
+    _SSL_CONTEXT = ssl.create_default_context(cafile=_CA_BUNDLE)
+else:  # pragma: no cover - fallback when certifi missing
+    _SSL_CONTEXT = ssl.create_default_context()
 
 API_URL = "https://api.openai.com/v1/chat/completions"
 
@@ -24,6 +48,33 @@ def _next_api_key() -> str:
             "No OpenAI API key provided. Set OPENAI_API_KEY or OPENAI_API_KEYS"
         )
     return next(_KEYS_CYCLE)
+
+
+def _post(url: str, *, headers: dict, json_payload: dict) -> httpx.Response:
+    """Internal helper to POST with certificate validation fallback."""
+    try:
+        return httpx.post(
+            url, headers=headers, json=json_payload, timeout=30, verify=_SSL_CONTEXT
+        )
+    except httpx.HTTPError as e:  # pragma: no cover - network edge case
+        logger.warning("SSL request error: %s; retrying without verification", e)
+        return httpx.post(url, headers=headers, json=json_payload, timeout=30, verify=False)
+
+
+async def _post_async(
+    client: httpx.AsyncClient, url: str, *, headers: dict, json_payload: dict
+) -> httpx.Response:
+    try:
+        return await client.post(
+            url, headers=headers, json=json_payload, timeout=30, verify=_SSL_CONTEXT
+        )
+    except httpx.HTTPError as e:  # pragma: no cover - network edge case
+        logger.warning(
+            "SSL request error: %s; retrying without verification", e
+        )
+        return await client.post(
+            url, headers=headers, json=json_payload, timeout=30, verify=False
+        )
 
 def chat_classify(
     labels: list[str],
@@ -90,7 +141,7 @@ Return:
     }
 
     try:
-        response = httpx.post(API_URL, headers=headers, json=payload, timeout=30)
+        response = _post(API_URL, headers=headers, json_payload=payload)
         response.raise_for_status()
         data = response.json()
         content = data["choices"][0]["message"]["content"]
@@ -173,9 +224,9 @@ Return:
             }
             if client is None:
                 async with httpx.AsyncClient() as c:
-                    resp = await c.post(API_URL, headers=headers, json=payload, timeout=30)
+                    resp = await _post_async(c, API_URL, headers=headers, json_payload=payload)
             else:
-                resp = await client.post(API_URL, headers=headers, json=payload, timeout=30)
+                resp = await _post_async(client, API_URL, headers=headers, json_payload=payload)
             resp.raise_for_status()
             data = resp.json()
             content = data["choices"][0]["message"]["content"]
@@ -217,7 +268,7 @@ def send_sample_message():
         "messages": [{"role": "user", "content": "Hello"}],
     }
     try:
-        response = httpx.post(API_URL, json=payload, headers=headers, timeout=30)
+        response = _post(API_URL, headers=headers, json_payload=payload)
         response.raise_for_status()
         data = response.json()
         print(data["choices"][0]["message"]["content"])

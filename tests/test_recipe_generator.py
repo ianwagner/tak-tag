@@ -6,8 +6,10 @@ import types
 googleapiclient_errors = types.ModuleType('googleapiclient.errors')
 googleapiclient_errors.HttpError = type('HttpError', (Exception,), {})
 
+openai_module = types.ModuleType('openai')
+openai_module.OpenAI = object
 stub_modules = {
-    'openai': types.ModuleType('openai'),
+    'openai': openai_module,
     'pandas': types.ModuleType('pandas'),
     'googleapiclient': types.ModuleType('googleapiclient'),
     'googleapiclient.discovery': types.ModuleType('googleapiclient.discovery'),
