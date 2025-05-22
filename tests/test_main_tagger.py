@@ -147,3 +147,27 @@ def test_run_tagger_empty_folder_id_errors_before_api(monkeypatch):
         raise AssertionError('ValueError not raised')
 
     assert 'called' not in called
+
+
+def test_cli_passes_concurrency(monkeypatch):
+    """Ensure the CLI forwards the concurrency argument."""
+    import runpy
+    import os
+
+    captured = {}
+
+    def fake_run_tagger(sheet_id, folder_id, expected_content, *, concurrency):
+        captured['sheet'] = sheet_id
+        captured['folder'] = folder_id
+        captured['expected'] = expected_content
+        captured['concurrency'] = concurrency
+
+    monkeypatch.setattr(sys, 'argv', ['main_tagger.py', 'SID', 'FID', '-c', '7'])
+    monkeypatch.setattr(builtins, 'open', lambda p, *a, **k: io.StringIO('') if p == 'secrets.toml' else _open(p, *a, **k))
+
+    runpy.run_path(os.path.join(os.path.dirname(main_tagger.__file__), 'main_tagger.py'), run_name='__main__', init_globals={'run_tagger': fake_run_tagger})
+
+    assert captured['sheet'] == 'SID'
+    assert captured['folder'] == 'FID'
+    assert captured['expected'] == []
+    assert captured['concurrency'] == 7

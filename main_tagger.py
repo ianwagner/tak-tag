@@ -196,6 +196,18 @@ if __name__ == "__main__":
         default=[],
         help="Additional expected content tags",
     )
+    parser.add_argument(
+        "-c",
+        "--concurrency",
+        type=int,
+        default=5,
+        help="Number of concurrent image tagging tasks",
+    )
 
     args = parser.parse_args()
-    run_tagger(args.sheet_id, args.folder_id, args.expected_content)
+    run_tagger(
+        args.sheet_id,
+        args.folder_id,
+        args.expected_content,
+        concurrency=args.concurrency,
+    )
