@@ -1,13 +1,15 @@
 
 import io
 import json
+import asyncio
 import toml
+import httpx
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseDownload
 from googleapiclient.errors import HttpError
 from google.cloud import vision
-from chat_classifier import chat_classify
+from chat_classifier import async_chat_classify
 
 SCOPES = [
     'https://www.googleapis.com/auth/drive.readonly',
@@ -113,18 +115,40 @@ def write_to_sheet(sheet_id, rows):
         body={'values': rows}
     ).execute()
 
-def run_tagger(sheet_id, folder_id, expected_content=None):
-    """Tag images in a Drive folder and write results to a Google Sheet.
+async def _process_file(file, expected_content, semaphore, client):
+    """Process a single image file asynchronously."""
+    async with semaphore:
+        loop = asyncio.get_running_loop()
+        labels, web_labels = await loop.run_in_executor(None, analyze_image, file['id'])
 
-    Parameters
-    ----------
-    sheet_id : str
-        Destination Google Sheet ID.
-    folder_id : str
-        Source Drive folder containing images.
-    expected_content : list[str] | None, optional
-        Additional content tags to classify. Defaults to ``[]`` if not provided.
-    """
+        chat_result = await async_chat_classify(
+            labels,
+            web_labels,
+            expected_content,
+            client=client,
+        )
+
+        descriptors = ', '.join(chat_result.get("descriptors", []))
+        matched_content = chat_result.get("match_content", "unknown")
+        audience = chat_result.get("audience", "unknown")
+        product = chat_result.get("product", "unknown")
+        angle = chat_result.get("angle", "unknown")
+
+        return [
+            file['name'],
+            file['webViewLink'],
+            ', '.join(labels),
+            ', '.join(web_labels),
+            descriptors,
+            matched_content,
+            audience,
+            product,
+            angle,
+        ]
+
+
+async def run_tagger_async(sheet_id, folder_id, expected_content=None, *, concurrency: int = 5):
+    """Tag images concurrently and write results to a Google Sheet."""
 
     if not sheet_id or not folder_id:
         raise ValueError("sheet_id and folder_id are required")
@@ -143,33 +167,18 @@ def run_tagger(sheet_id, folder_id, expected_content=None):
         'Angle',
     ]]
     files = list_images(folder_id)
-    for file in files:
-        labels, web_labels = analyze_image(file['id'])
-
-        chat_result = chat_classify(
-            labels,
-            web_labels,
-            expected_content,
-        )
-
-        descriptors = ', '.join(chat_result.get("descriptors", []))
-        matched_content = chat_result.get("match_content", "unknown")
-        audience = chat_result.get("audience", "unknown")
-        product = chat_result.get("product", "unknown")
-        angle = chat_result.get("angle", "unknown")
-
-        rows.append([
-            file['name'],
-            file['webViewLink'],
-            ', '.join(labels),
-            ', '.join(web_labels),
-            descriptors,
-            matched_content,
-            audience,
-            product,
-            angle,
-        ])
+    sem = asyncio.Semaphore(concurrency)
+    async with httpx.AsyncClient() as client:
+        tasks = [_process_file(f, expected_content, sem, client) for f in files]
+        for row in await asyncio.gather(*tasks):
+            rows.append(row)
     write_to_sheet(sheet_id, rows)
+
+
+def run_tagger(sheet_id, folder_id, expected_content=None, *, concurrency: int = 5):
+    """Synchronously run :func:`run_tagger_async`."""
+
+    asyncio.run(run_tagger_async(sheet_id, folder_id, expected_content, concurrency=concurrency))
 
 
 if __name__ == "__main__":

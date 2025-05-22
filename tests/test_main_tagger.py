@@ -85,17 +85,17 @@ def test_run_tagger_outputs_basic_columns(monkeypatch):
     monkeypatch.setattr(main_tagger, 'write_to_sheet', fake_write)
     monkeypatch.setattr(main_tagger, 'list_images', fake_list_images)
     monkeypatch.setattr(main_tagger, 'analyze_image', lambda fid: (['label'], ['web']))
-    monkeypatch.setattr(
-        main_tagger,
-        'chat_classify',
-        lambda *a, **k: {
+
+    async def fake_chat(*a, **k):
+        return {
             'descriptors': ['desc'],
             'match_content': 'match',
             'audience': 'aud',
             'product': 'prod',
             'angle': 'ang',
-        },
-    )
+        }
+
+    monkeypatch.setattr(main_tagger, 'async_chat_classify', fake_chat)
 
     main_tagger.run_tagger(sheet_id, folder_id, ['x'])
 
