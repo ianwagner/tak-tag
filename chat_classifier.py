@@ -19,6 +19,10 @@ _KEYS_CYCLE = itertools.cycle(_API_KEYS) if _API_KEYS else itertools.cycle([""])
 
 def _next_api_key() -> str:
     """Return the next API key in round-robin order."""
+    if not _API_KEYS:
+        raise RuntimeError(
+            "No OpenAI API key provided. Set OPENAI_API_KEY or OPENAI_API_KEYS"
+        )
     return next(_KEYS_CYCLE)
 
 def chat_classify(

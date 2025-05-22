@@ -21,6 +21,7 @@ python -m pytest -q
 
 - `OPENAI_API_KEY` – API key for accessing OpenAI models.
 - `OPENAI_API_KEYS` – optional comma-separated keys enabling basic rotation when hitting rate limits.
+- Either `OPENAI_API_KEY` or `OPENAI_API_KEYS` must be set; otherwise the library raises an error when calling OpenAI services.
 - `GOOGLE_SERVICE_ACCOUNT` – path to a Google service account JSON or the JSON string itself.
 
 ## `secrets.toml` Format
