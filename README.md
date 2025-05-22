@@ -11,6 +11,11 @@ TAK Tag provides utilities for tagging image assets and generating ad recipes us
 pip install -r requirements.txt
 ```
 
+`certifi` provides the CA bundle used for HTTPS verification. The application
+logs the path of the bundle it uses. When deploying (for example on Render),
+ensure system certificates are available or install `certifi` so SSL requests
+succeed.
+
 After installing the requirements you can run the test suite:
 
 ```bash

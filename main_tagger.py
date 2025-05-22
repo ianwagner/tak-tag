@@ -175,10 +175,15 @@ async def run_tagger_async(sheet_id, folder_id, expected_content=None, *, concur
     write_to_sheet(sheet_id, rows)
 
 
-def run_tagger(sheet_id, folder_id, expected_content=None, *, concurrency: int = 5):
-    """Synchronously run :func:`run_tagger_async`."""
+if 'run_tagger' not in globals():
+    def run_tagger(sheet_id, folder_id, expected_content=None, *, concurrency: int = 5):
+        """Synchronously run :func:`run_tagger_async`."""
 
-    asyncio.run(run_tagger_async(sheet_id, folder_id, expected_content, concurrency=concurrency))
+        asyncio.run(
+            run_tagger_async(
+                sheet_id, folder_id, expected_content, concurrency=concurrency
+            )
+        )
 
 
 if __name__ == "__main__":

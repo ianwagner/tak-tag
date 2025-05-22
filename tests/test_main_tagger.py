@@ -14,6 +14,25 @@ googleapiclient_discovery.build = lambda *a, **k: object()
 googleapiclient_http = types.ModuleType('googleapiclient.http')
 googleapiclient_http.MediaIoBaseDownload = object
 
+# Minimal httpx stub
+httpx_module = types.ModuleType('httpx')
+class FakeAsyncClient:
+    async def __aenter__(self):
+        return self
+    async def __aexit__(self, exc_type, exc, tb):
+        pass
+    async def post(self, *args, **kwargs):
+        return types.SimpleNamespace(json=lambda: {}, raise_for_status=lambda: None)
+
+def fake_post(*args, **kwargs):
+    return types.SimpleNamespace(json=lambda: {}, raise_for_status=lambda: None)
+
+httpx_module.AsyncClient = FakeAsyncClient
+httpx_module.post = fake_post
+httpx_module.HTTPError = Exception
+httpx_module.HTTPStatusError = Exception
+httpx_module.Response = types.SimpleNamespace
+
 # google.oauth2.service_account has nested modules
 google_module = types.ModuleType('google')
 oauth2_module = types.ModuleType('google.oauth2')
@@ -43,6 +62,7 @@ stub_modules = {
     'googleapiclient.discovery': googleapiclient_discovery,
     'googleapiclient.http': googleapiclient_http,
     'googleapiclient.errors': googleapiclient_errors,
+    'httpx': httpx_module,
     'google': google_module,
     'google.oauth2': oauth2_module,
     'google.oauth2.service_account': service_account_module,
