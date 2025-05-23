@@ -4,7 +4,6 @@ import json
 import asyncio
 import itertools
 import logging
-import ssl
 import httpx
 
 try:
@@ -25,9 +24,9 @@ for _proxy_var in ("HTTP_PROXY", "http_proxy", "HTTPS_PROXY", "https_proxy"):
 
 if _CA_BUNDLE:
     logger.info("Using CA bundle at %s", _CA_BUNDLE)
-    _SSL_CONTEXT = ssl.create_default_context(cafile=_CA_BUNDLE)
+    _VERIFY = _CA_BUNDLE
 else:  # pragma: no cover - fallback when certifi missing
-    _SSL_CONTEXT = ssl.create_default_context()
+    _VERIFY = True
 
 API_URL = "https://api.openai.com/v1/chat/completions"
 
@@ -54,7 +53,7 @@ def _post(url: str, *, headers: dict, json_payload: dict) -> httpx.Response:
     """Internal helper to POST with certificate validation fallback."""
     try:
         return httpx.post(
-            url, headers=headers, json=json_payload, timeout=30, verify=_SSL_CONTEXT
+            url, headers=headers, json=json_payload, timeout=30, verify=_VERIFY
         )
     except httpx.HTTPError as e:  # pragma: no cover - network edge case
         logger.warning("SSL request error: %s; retrying without verification", e)
@@ -66,7 +65,7 @@ async def _post_async(
 ) -> httpx.Response:
     try:
         return await client.post(
-            url, headers=headers, json=json_payload, timeout=30, verify=_SSL_CONTEXT
+            url, headers=headers, json=json_payload, timeout=30, verify=_VERIFY
         )
     except httpx.HTTPError as e:  # pragma: no cover - network edge case
         logger.warning(
@@ -223,10 +222,11 @@ Return:
                 "Content-Type": "application/json",
             }
             if client is None:
-                async with httpx.AsyncClient() as c:
-                    resp = await _post_async(c, API_URL, headers=headers, json_payload=payload)
+                async with httpx.AsyncClient(http2=False, verify=_VERIFY, trust_env=False) as c:
+                    resp = await c.post(API_URL, headers=headers, json=payload, timeout=30)
             else:
-                resp = await _post_async(client, API_URL, headers=headers, json_payload=payload)
+                resp = await client.post(API_URL, headers=headers, json=payload, timeout=30, verify=_VERIFY)
+
             resp.raise_for_status()
             data = resp.json()
             content = data["choices"][0]["message"]["content"]
@@ -236,16 +236,41 @@ Return:
         except httpx.HTTPStatusError as http_err:
             status = http_err.response.status_code
             if status in {429, 500, 502, 503, 504} and attempt < max_retries:
+                logger.warning(
+                    "Transient HTTP %s error: %s; retrying (%d/%d)",
+                    status,
+                    http_err,
+                    attempt + 1,
+                    max_retries,
+                )
                 await asyncio.sleep(backoff * (2 ** attempt))
                 attempt += 1
                 continue
-            print("ChatGPT classification HTTP error:", http_err)
+            logger.error("ChatGPT classification HTTP error: %s", http_err)
+        except httpx.HTTPError as http_err:
+            if attempt < max_retries:
+                logger.warning(
+                    "HTTP request error: %s; retrying (%d/%d)",
+                    http_err,
+                    attempt + 1,
+                    max_retries,
+                )
+                await asyncio.sleep(backoff * (2 ** attempt))
+                attempt += 1
+                continue
+            logger.error("ChatGPT classification request error: %s", http_err)
         except Exception as e:  # pragma: no cover - defensive
             if attempt < max_retries:
+                logger.warning(
+                    "Unexpected error: %s; retrying (%d/%d)",
+                    e,
+                    attempt + 1,
+                    max_retries,
+                )
                 await asyncio.sleep(backoff * (2 ** attempt))
                 attempt += 1
                 continue
-            print("ChatGPT classification error:", e)
+            logger.exception("ChatGPT classification error")
         break
 
     return {
