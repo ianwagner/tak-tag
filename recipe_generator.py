@@ -83,7 +83,7 @@ def generate_recipe_copy(asset, layout, copy_format, brand, *, audience=None, an
     tone = brand.get("Copy Tone", "neutral")
     brand_name = brand.get("Brand Name", "")
     prompt = f"""
-You're an expert Meta ad copywriter. Generate copy that matches the following structure and purpose:
+You're an expert Meta ad copywriter. Generate in ad copy that matches the following structure and purpose:
 🏢 Brand: {brand_name}
 📌 Layout: {layout.get('Name')} — {layout.get('Use Case')}
 🖋 Copy Format: {copy_format.get('Name')} — {copy_format.get('Use Case')}
@@ -95,7 +95,7 @@ You're an expert Meta ad copywriter. Generate copy that matches the following st
 🎁 Offer: {offer or ''}
 🎯 Descriptors: {descriptors}
 🗣 Tone: {tone}
-Return only the finished ad copy.
+Return only the finished ad copy. Do not include hashtags or Emojis.
 """
     logger.debug("=== PROMPT SENT TO GPT ===\n%s", prompt)
     client = openai.OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
