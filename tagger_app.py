@@ -78,13 +78,20 @@ with tab1:
 
     st.subheader("Expected Content")
     expected_content = st_tags(label="Add tags", key="expected_content")
+    st.subheader("Expected Products")
+    expected_products = st_tags(label="Add products", key="expected_products")
 
     if st.button("Run Tagging"):
         try:
             st.info("Tagging images...")
             final_sheet = sheet_id
             final_folder = folder_id
-            run_tagger(final_sheet, final_folder, expected_content)
+            run_tagger(
+                final_sheet,
+                final_folder,
+                expected_content,
+                expected_products,
+            )
 
             st.success("✅ Tagging complete. Check your Google Sheet.")
         except Exception as e:

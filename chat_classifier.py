@@ -9,6 +9,9 @@ def chat_classify(
     labels: list[str],
     web_labels: list[str],
     expected_content=None,
+    *,
+    file_name: str = "",
+    expected_products=None,
 ) -> dict:
     """Classify image tags using ChatGPT.
 
@@ -20,9 +23,17 @@ def chat_classify(
         Web entity labels returned from Vision API.
     expected_content : list[str] | None, optional
         Additional content tags to consider for matching. Defaults to ``[]``.
+    file_name : str, optional
+        Name of the file being analyzed. Used as an additional signal when
+        matching products. Defaults to an empty string.
+    expected_products : list[str] | None, optional
+        Product names to look for in the image data and file name. The returned
+        ``product`` field will be the closest match or ``unknown`` if none
+        apply. Defaults to ``[]``.
     """
 
     expected_content = expected_content or []
+    expected_products = expected_products or []
     prompt = f"""
 You are an ad tagging assistant. Based on the following image data:
 
@@ -32,6 +43,9 @@ Generic Labels:
 Web Entities:
 {', '.join(web_labels)}
 
+File Name:
+{file_name}
+
 Return a JSON object with:
 - "audience": describe the most likely audience (e.g., mom, teen, athlete, grandma)
 - "product": name the product shown, and keep it specific if a brand is mentioned
@@ -40,6 +54,9 @@ Return a JSON object with:
 
 Use the following expected content tags to set ``match_content`` to the closest tag or ``unknown`` if nothing is relevant:
 {', '.join(expected_content)}
+
+Use the following expected products to set ``product`` to the closest match found in the labels, entities or file name, or ``unknown`` if nothing matches:
+{', '.join(expected_products)}
 
 Return:
 {{
