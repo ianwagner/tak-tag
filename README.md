@@ -62,7 +62,12 @@ You can call the utility functions from the command line. For example, to tag im
 ```bash
 python - <<'PY'
 from main_tagger import run_tagger
-run_tagger('SHEET_ID', 'FOLDER_ID', ['shoes', 'accessories'])
+run_tagger(
+    'SHEET_ID',
+    'FOLDER_ID',
+    ['shoes', 'accessories'],
+    ['Sneaker', 'Boot']
+)
 PY
 ```
 

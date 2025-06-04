@@ -113,7 +113,7 @@ def write_to_sheet(sheet_id, rows):
         body={'values': rows}
     ).execute()
 
-def run_tagger(sheet_id, folder_id, expected_content=None):
+def run_tagger(sheet_id, folder_id, expected_content=None, expected_products=None):
     """Tag images in a Drive folder and write results to a Google Sheet.
 
     Parameters
@@ -124,12 +124,17 @@ def run_tagger(sheet_id, folder_id, expected_content=None):
         Source Drive folder containing images.
     expected_content : list[str] | None, optional
         Additional content tags to classify. Defaults to ``[]`` if not provided.
+    expected_products : list[str] | None, optional
+        Product names to look for when tagging. These are matched against the
+        image labels, web entities and file name. Defaults to ``[]`` if not
+        provided.
     """
 
     if not sheet_id or not folder_id:
         raise ValueError("sheet_id and folder_id are required")
 
     expected_content = expected_content or []
+    expected_products = expected_products or []
 
     rows = [[
         'Image Name',
@@ -150,6 +155,8 @@ def run_tagger(sheet_id, folder_id, expected_content=None):
             labels,
             web_labels,
             expected_content,
+            file_name=file['name'],
+            expected_products=expected_products,
         )
 
         descriptors = ', '.join(chat_result.get("descriptors", []))
@@ -187,6 +194,18 @@ if __name__ == "__main__":
         default=[],
         help="Additional expected content tags",
     )
+    parser.add_argument(
+        "-p",
+        "--expected-products",
+        nargs="*",
+        default=[],
+        help="Expected product names to match",
+    )
 
     args = parser.parse_args()
-    run_tagger(args.sheet_id, args.folder_id, args.expected_content)
+    run_tagger(
+        args.sheet_id,
+        args.folder_id,
+        args.expected_content,
+        args.expected_products,
+    )

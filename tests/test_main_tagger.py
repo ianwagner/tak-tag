@@ -97,7 +97,7 @@ def test_run_tagger_outputs_basic_columns(monkeypatch):
         },
     )
 
-    main_tagger.run_tagger(sheet_id, folder_id, ['x'])
+    main_tagger.run_tagger(sheet_id, folder_id, ['x'], ['p'])
 
     assert captured['sheet_id'] == 'SHEET123'
     assert captured['folder_id'] == 'FOLDER456'
@@ -140,7 +140,7 @@ def test_run_tagger_empty_folder_id_errors_before_api(monkeypatch):
     monkeypatch.setattr(main_tagger, 'drive_service', FakeDrive())
 
     try:
-        main_tagger.run_tagger('sid', '', [])
+        main_tagger.run_tagger('sid', '', [], [])
     except ValueError as e:
         assert 'folder' in str(e).lower()
     else:
