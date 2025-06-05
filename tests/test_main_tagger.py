@@ -91,9 +91,7 @@ def test_run_tagger_outputs_basic_columns(monkeypatch):
         lambda *a, **k: {
             'descriptors': ['desc'],
             'match_content': 'match',
-            'audience': 'aud',
             'product': 'prod',
-            'angle': 'ang',
         },
     )
 
@@ -108,9 +106,7 @@ def test_run_tagger_outputs_basic_columns(monkeypatch):
         'Google Web Entities',
         'Descriptors',
         'Matched Content',
-        'Audience',
         'Product',
-        'Angle',
     ]
     assert captured['rows'][1] == [
         'img',
@@ -119,9 +115,7 @@ def test_run_tagger_outputs_basic_columns(monkeypatch):
         'web',
         'desc',
         'match',
-        'aud',
         'prod',
-        'ang',
     ]
 
 

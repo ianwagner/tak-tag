@@ -143,9 +143,7 @@ def run_tagger(sheet_id, folder_id, expected_content=None, expected_products=Non
         'Google Web Entities',
         'Descriptors',
         'Matched Content',
-        'Audience',
         'Product',
-        'Angle',
     ]]
     files = list_images(folder_id)
     for file in files:
@@ -161,9 +159,7 @@ def run_tagger(sheet_id, folder_id, expected_content=None, expected_products=Non
 
         descriptors = ', '.join(chat_result.get("descriptors", []))
         matched_content = chat_result.get("match_content", "unknown")
-        audience = chat_result.get("audience", "unknown")
         product = chat_result.get("product", "unknown")
-        angle = chat_result.get("angle", "unknown")
 
         rows.append([
             file['name'],
@@ -172,9 +168,7 @@ def run_tagger(sheet_id, folder_id, expected_content=None, expected_products=Non
             ', '.join(web_labels),
             descriptors,
             matched_content,
-            audience,
             product,
-            angle,
         ])
     write_to_sheet(sheet_id, rows)
 
