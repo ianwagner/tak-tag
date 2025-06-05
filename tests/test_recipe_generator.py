@@ -197,9 +197,20 @@ def test_generate_recipes_filters_layouts_and_copy(monkeypatch):
     monkeypatch.setattr(recipe_generator, 'get_google_service', fake_get_google_service)
 
     output = recipe_generator.generate_recipes(
-        sheet_id, {}, folder_id, 'BR', brand_sheet_id, num_recipes=1,
-        selected_layouts=[selected_layout], selected_copy_formats=[selected_copy]
+        sheet_id,
+        {},
+        folder_id,
+        'BR',
+        brand_sheet_id,
+        num_recipes=1,
+        selected_layouts=[selected_layout],
+        selected_copy_formats=[selected_copy],
     )
+
+    header = output[0]
+    asset_columns = [c for c in header if c.startswith('Asset')]
+    assert asset_columns[:3] == ['Asset 1 Link', 'Asset 2 Link', 'Asset 3 Link']
+    assert len(asset_columns) >= 3
 
     assert output[1][1] == selected_layout
     assert output[1][2] == selected_copy

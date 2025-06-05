@@ -141,6 +141,14 @@ def generate_recipes(
     brand_df = read_sheet(sheets_service, brand_sheet_id, 'brands')
     brand = get_brand_profile(brand_df, brand_code)
     tagged_assets = asset_df.to_dict(orient='records')
+
+    # Determine how many asset columns to create. Always include at least 3.
+    try:
+        max_assets = max(3, int(layouts_df['Asset Count'].astype(int).max()))
+    except Exception:
+        max_assets = 3
+
+    asset_headers = [f"Asset {i + 1} Link" for i in range(max_assets)]
     output = [[
         "Ad id",
         "Layout",
@@ -149,8 +157,7 @@ def generate_recipes(
         "Product",
         "Angle",
         "Offer",
-        "Asset 1 Link",
-        "Asset 2 Link",
+        *asset_headers,
         "Copy",
         "Notes",
     ]]
@@ -160,15 +167,19 @@ def generate_recipes(
         asset_count = int(layout.get("Asset Count", "1"))
         selected_assets, needs_generation = choose_assets(tagged_assets, asset_count)
         if needs_generation:
-            output.append([
+            row = [
                 ad_id,
                 layout.get("Name"),
                 copy_format.get("Name"),
                 "", "", "",
-                "", "",
+                "",
+            ]
+            row.extend(["" for _ in range(max_assets)])
+            row.extend([
                 "ASSET NOT FOUND — RECOMMEND GENERATION",
                 f"No available tagged assets for layout requiring {asset_count} image(s)."
             ])
+            output.append(row)
             continue
         # Extract key info
         links = [get_asset_link(drive_service, a.get("Image Name"), folder_id) for a in selected_assets]
@@ -189,7 +200,7 @@ def generate_recipes(
             angle=chosen_angle,
             offer=chosen_offer,
         )
-        output.append([
+        row = [
             ad_id,
             layout.get("Name"),
             copy_format.get("Name"),
@@ -197,11 +208,13 @@ def generate_recipes(
             first_asset.get("Matched Product", ""),
             chosen_angle,
             chosen_offer,
-            links[0] if len(links) > 0 else "",
-            links[1] if len(links) > 1 else "",
+        ]
+        row.extend(links[i] if i < len(links) else "" for i in range(max_assets))
+        row.extend([
             ad_copy,
             ""
         ])
+        output.append(row)
 
     # Ensure the destination sheet exists before writing
     metadata = sheets_service.spreadsheets().get(
