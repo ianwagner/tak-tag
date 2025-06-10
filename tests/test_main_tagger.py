@@ -38,6 +38,12 @@ cloud_module.vision = vision_module
 toml_module = types.ModuleType('toml')
 toml_module.load = lambda f: {"google": {"service_account": "{}"}, "app_password": "pw"}
 
+openai_module = types.ModuleType('openai')
+class FakeOpenAI:
+    def __init__(self, api_key=None):
+        pass
+openai_module.OpenAI = FakeOpenAI
+
 stub_modules = {
     'googleapiclient': types.ModuleType('googleapiclient'),
     'googleapiclient.discovery': googleapiclient_discovery,
@@ -48,6 +54,7 @@ stub_modules = {
     'google.oauth2.service_account': service_account_module,
     'google.cloud': cloud_module,
     'google.cloud.vision': vision_module,
+    'openai': openai_module,
     'toml': toml_module,
 }
 
@@ -147,3 +154,31 @@ def test_run_tagger_empty_folder_id_errors_before_api(monkeypatch):
         raise AssertionError('ValueError not raised')
 
     assert 'called' not in called
+
+
+def test_write_to_sheet_batches_requests(monkeypatch):
+    captured = []
+
+    class FakeService:
+        def spreadsheets(self):
+            return self
+
+        def values(self):
+            return self
+
+        def append(self, spreadsheetId=None, range=None, valueInputOption=None, insertDataOption=None, body=None):
+            captured.append(body["values"])
+            return self
+
+        def execute(self):
+            pass
+
+    monkeypatch.setattr(main_tagger, "sheets_service", FakeService())
+
+    rows = [["r"]] * 1200
+    main_tagger.write_to_sheet("SID", rows)
+
+    assert len(captured) == 3
+    assert captured[0] == rows[:500]
+    assert captured[1] == rows[500:1000]
+    assert captured[2] == rows[1000:]

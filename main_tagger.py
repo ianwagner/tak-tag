@@ -8,6 +8,7 @@ from googleapiclient.http import MediaIoBaseDownload
 from googleapiclient.errors import HttpError
 from google.cloud import vision
 from chat_classifier import chat_classify
+from utils import chunk_rows
 
 SCOPES = [
     'https://www.googleapis.com/auth/drive.readonly',
@@ -105,13 +106,14 @@ def write_to_sheet(sheet_id, rows):
     None
     """
 
-    sheets_service.spreadsheets().values().append(
-        spreadsheetId=sheet_id,
-        range='A1',
-        valueInputOption='RAW',
-        insertDataOption='INSERT_ROWS',
-        body={'values': rows}
-    ).execute()
+    for chunk in chunk_rows(rows):
+        sheets_service.spreadsheets().values().append(
+            spreadsheetId=sheet_id,
+            range='A1',
+            valueInputOption='RAW',
+            insertDataOption='INSERT_ROWS',
+            body={'values': chunk}
+        ).execute()
 
 def run_tagger(sheet_id, folder_id, expected_content=None):
     """Tag images in a Drive folder and write results to a Google Sheet.
