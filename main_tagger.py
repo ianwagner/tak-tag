@@ -74,7 +74,23 @@ def analyze_image(file_id):
     except HttpError as e:
         raise RuntimeError(f"Failed to download file {file_id}: {e}")
 
-    image = vision.Image(content=fh.getvalue())
+    image_bytes = fh.getvalue()
+    if len(image_bytes) > 4 * 1024 * 1024:
+        try:
+            from PIL import Image
+
+            fh.seek(0)
+            with Image.open(fh) as img:
+                img.thumbnail((1600, 1600))
+                out = io.BytesIO()
+                img.save(out, format="JPEG", optimize=True)
+                image_bytes = out.getvalue()
+        except Exception as e:
+            raise RuntimeError(
+                f"Failed to resize large image {file_id}: {e}"
+            )
+
+    image = vision.Image(content=image_bytes)
 
     response = vision_client.annotate_image({
         'image': image,
