@@ -6,6 +6,7 @@ import logging
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
+from utils import chunk_rows
 # Configure basic logging
 logger = logging.getLogger(__name__)
 if not logger.hasHandlers():
@@ -214,11 +215,15 @@ def generate_recipes(
             body={"requests": [{"addSheet": {"properties": {"title": "recipes"}}}]},
         ).execute()
 
-    # Write output to Google Sheet
-    sheets_service.spreadsheets().values().update(
-        spreadsheetId=sheet_id,
-        range="recipes!A1",
-        valueInputOption="RAW",
-        body={"values": output}
-    ).execute()
+    # Write output to Google Sheet in manageable batches
+    start_row = 1
+    for chunk in chunk_rows(output):
+        range_name = f"recipes!A{start_row}"
+        sheets_service.spreadsheets().values().update(
+            spreadsheetId=sheet_id,
+            range=range_name,
+            valueInputOption="RAW",
+            body={"values": chunk}
+        ).execute()
+        start_row += len(chunk)
     return output

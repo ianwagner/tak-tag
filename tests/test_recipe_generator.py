@@ -242,3 +242,76 @@ def test_read_sheet_handles_mismatched_rows(monkeypatch):
 
     assert df.columns == ["A", "B", "C"]
     assert df.data == [["1", "2", ""], ["3", "4", "5"]]
+
+
+def test_generate_recipes_batches_updates(monkeypatch):
+    calls = []
+
+    class FakeService:
+        def spreadsheets(self):
+            return self
+
+        def values(self):
+            return self
+
+        def update(self, spreadsheetId=None, range=None, valueInputOption=None, body=None):
+            calls.append(body["values"])
+            return self
+
+        def get(self, spreadsheetId=None):
+            return types.SimpleNamespace(execute=lambda: {"sheets": [{"properties": {"title": "recipes"}}]})
+
+        def batchUpdate(self, **kwargs):
+            return types.SimpleNamespace(execute=lambda: None)
+
+        def execute(self):
+            pass
+
+    fake_service = FakeService()
+
+    def fake_get_google_service(info):
+        return fake_service, object()
+
+    class FakeDF:
+        def __init__(self, rows):
+            self.rows = rows
+
+        def to_dict(self, orient="records"):
+            assert orient == "records"
+            return self.rows
+
+    def fake_read_sheet(service, sid, sheet_name):
+        if sheet_name == "Sheet1":
+            return FakeDF([
+                {"Image Name": "img", "Matched Audience": "aud", "Matched Product": "p", "Matched Angle": "a"}
+            ])
+        return FakeDF([
+            {"Name": "n", "Use Case": "u", "Asset Count": "1", "Prompt Style": "s"}
+        ])
+
+    def fake_get_brand_profile(df, code):
+        return {}
+
+    def fake_choose_recipe_components(*args, **kwargs):
+        return {"Name": "L", "Asset Count": "1"}, {"Name": "C"}
+
+    def fake_choose_assets(tagged, count):
+        return [tagged[0]], False
+
+    def fake_get_asset_link(*args, **kwargs):
+        return "link"
+
+    def fake_generate_recipe_copy(*args, **kwargs):
+        return "copy"
+
+    monkeypatch.setattr(recipe_generator, "get_google_service", fake_get_google_service)
+    monkeypatch.setattr(recipe_generator, "read_sheet", fake_read_sheet)
+    monkeypatch.setattr(recipe_generator, "get_brand_profile", fake_get_brand_profile)
+    monkeypatch.setattr(recipe_generator, "choose_recipe_components", fake_choose_recipe_components)
+    monkeypatch.setattr(recipe_generator, "choose_assets", fake_choose_assets)
+    monkeypatch.setattr(recipe_generator, "get_asset_link", fake_get_asset_link)
+    monkeypatch.setattr(recipe_generator, "generate_recipe_copy", fake_generate_recipe_copy)
+
+    recipe_generator.generate_recipes("SID", {}, "FID", "BR", "BRAND", num_recipes=501)
+
+    assert len(calls) == 2
