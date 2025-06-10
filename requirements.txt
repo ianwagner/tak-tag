@@ -6,4 +6,5 @@ google-auth-oauthlib
 google-cloud-vision
 openai
 streamlit-tags
+Pillow
 pytest
