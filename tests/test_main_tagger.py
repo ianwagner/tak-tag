@@ -185,3 +185,84 @@ def test_write_to_sheet_batches_requests(monkeypatch):
     assert captured[0] == rows[:500]
     assert captured[1] == rows[500:1000]
     assert captured[2] == rows[1000:]
+
+
+def test_analyze_image_truncated_image(monkeypatch):
+    truncated = b"\xff\xd8\xff"  # partial JPEG header
+    large = truncated * (4 * 1024 * 1024 // len(truncated) + 1)
+
+    class FakeDownloader:
+        def __init__(self, fh, request):
+            self.fh = fh
+
+        def next_chunk(self):
+            self.fh.write(large)
+            return None, True
+
+    class FakeFiles:
+        def get_media(self, fileId=None):
+            return object()
+
+    class FakeDrive:
+        def files(self):
+            return FakeFiles()
+
+    class FakeVisionClient:
+        def annotate_image(self, req):
+            class FakeLabel:
+                description = "l"
+
+            class FakeEntity:
+                description = "w"
+
+            class FakeWeb:
+                web_entities = [FakeEntity()]
+
+            return types.SimpleNamespace(
+                label_annotations=[FakeLabel()], web_detection=FakeWeb()
+            )
+
+    class FakeVisionModule:
+        class Feature:
+            class Type:
+                LABEL_DETECTION = 1
+                WEB_DETECTION = 2
+
+        class Image:
+            def __init__(self, content=None):
+                self.content = content
+
+    monkeypatch.setattr(main_tagger, "drive_service", FakeDrive())
+    monkeypatch.setattr(main_tagger, "MediaIoBaseDownload", FakeDownloader)
+    monkeypatch.setattr(main_tagger, "vision_client", FakeVisionClient())
+    monkeypatch.setattr(main_tagger, "vision", FakeVisionModule)
+
+    fake_imagefile = types.SimpleNamespace(LOAD_TRUNCATED_IMAGES=False)
+
+    class FakeImg:
+        def __enter__(self):
+            if not fake_imagefile.LOAD_TRUNCATED_IMAGES:
+                raise OSError("truncated")
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            pass
+
+        def thumbnail(self, size):
+            pass
+
+        def save(self, out, format=None, optimize=None):
+            out.write(b"ok")
+
+    fake_image = types.SimpleNamespace(open=lambda fh: FakeImg())
+
+    pil_mod = types.ModuleType("PIL")
+    pil_mod.Image = fake_image
+    pil_mod.ImageFile = fake_imagefile
+    sys.modules["PIL"] = pil_mod
+    sys.modules["PIL.Image"] = fake_image
+    sys.modules["PIL.ImageFile"] = fake_imagefile
+
+    labels, web = main_tagger.analyze_image("ID")
+    assert labels == ["l"]
+    assert web == ["w"]

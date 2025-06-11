@@ -77,7 +77,9 @@ def analyze_image(file_id):
     image_bytes = fh.getvalue()
     if len(image_bytes) > 4 * 1024 * 1024:
         try:
-            from PIL import Image
+            from PIL import Image, ImageFile
+
+            ImageFile.LOAD_TRUNCATED_IMAGES = True
 
             fh.seek(0)
             with Image.open(fh) as img:
