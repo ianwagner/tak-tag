@@ -52,7 +52,11 @@ def read_sheet(service, spreadsheet_id, sheet_name):
 
     return pd.DataFrame(padded_rows[1:], columns=padded_rows[0])
 def get_asset_link(drive_service, file_name, folder_id):
-    query = f"name = '{file_name}' and '{folder_id}' in parents and mimeType contains 'image/'"
+    safe_name = file_name.replace("'", "\\'")
+    query = (
+        f"name = '{safe_name}' and '{folder_id}' in parents "
+        "and mimeType contains 'image/'"
+    )
     try:
         results = drive_service.files().list(q=query, fields="files(id, name)").execute()
         files = results.get('files', [])

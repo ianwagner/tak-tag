@@ -1,6 +1,9 @@
 import importlib
 import sys
 import types
+import os
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 # Stub external dependencies not installed during tests
 googleapiclient_errors = types.ModuleType('googleapiclient.errors')
@@ -24,6 +27,8 @@ stub_modules.update({
     'google.oauth2': oauth2_module,
     'google.oauth2.service_account': service_account_module,
 })
+
+stub_modules['googleapiclient.discovery'].build = lambda *a, **k: object()
 
 for name, mod in stub_modules.items():
     sys.modules.setdefault(name, mod)
@@ -59,6 +64,31 @@ def test_choose_assets_insufficient_assets():
     selected, needs_generation = recipe_generator.choose_assets(assets, count=1)
     assert selected == []
     assert needs_generation is True
+
+
+def test_get_asset_link_escapes_single_quotes(monkeypatch):
+    captured = {}
+
+    class FakeExecute:
+        def execute(self):
+            return {"files": [{"id": "1", "name": "o'neill.png"}]}
+
+    class FakeFiles:
+        def list(self, q=None, fields=None):
+            captured['q'] = q
+            return FakeExecute()
+
+    class FakeDrive:
+        def files(self):
+            return FakeFiles()
+
+    link = recipe_generator.get_asset_link(FakeDrive(), "o'neill.png", "F")
+
+    assert (
+        captured['q']
+        == "name = 'o\\'neill.png' and 'F' in parents and mimeType contains 'image/'"
+    )
+    assert link == "https://drive.google.com/uc?id=1"
 
 def test_generate_recipe_copy_returns_cleaned(monkeypatch):
     response_text = '  "Great copy!"  '
